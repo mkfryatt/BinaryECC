@@ -1,70 +1,90 @@
-import Base: +, -, *, /, ^, ==, repr, inv
+import Base: +, -, *, /, ^, ==, !=, repr, inv
 
 struct FieldMismatchException <: Exception end
 
 struct Field
-    x::BigInt #the value of this element
-    m::Integer #the order of its field
-    f::BigInt #the reduction polynomial - x^m
-    Field(x::Number, m::Number, f::Number) = Field(convert(BigInt, x), convert(Integer, m), convert(BigInt, f))
-    Field(x::BigInt, m::Integer, f::BigInt) = new(x, m, f)
+    order::Int16 #the order of the field
+    reduction::BigInt #the reduction polynomial - x^m
+    Field(m::Number, f::Number) = Field(convert(Int16, m), convert(BigInt, f))
 end
 
-function copy(a::Field)
-    return Field(a.x, a.m, a.f)
+struct FieldPoint
+    x::BigInt
+    field::Field
+    FieldPoint(x::Number, m::Number, f::Number) = FieldPoint(convert(BigInt, x), Field(m, f))
+    FieldPoint(x::BigInt, field:Field) = new(x, field)
 end
 
-function repr(x::Field)
-    return repr(x.val)
+function copy(f::Field)
+    return Field(f.order, f.reduction)
+end
+
+function copy(a::FieldPoint)
+    return FieldPoint(a.x, a.field)
+end
+
+function repr(f::Field)
+    return "Order: "*repr(f.order)*"\nReduction: "*repr(reduction)
+end
+
+function repr(a::FieldPoint)
+    #TODO
+    return "TODO"
 end
 
 function ==(a::Field, b::Field)
-    return a.m==b.m &&  a.x==b.x && a.f==b.f
+    return a.order==b.order && a.reduction==b.reduction
 end
 
-function +(a::Field, b::Field)
-    if a.m != b.m || a.f != b.f
-        throw(FieldMismatchException)
-    end
-    return Field(a.x ⊻ b.x, a.m, a.f)
+function ==(a::FieldPoint, b::FieldPoint)
+    return a.x==b.x && a.field==b.field
 end
 
-function -(a::Field, b::Field)
+function !=(a::Field, b::Field)
+    return a.order!=b.order || a.reduction!=b.reduction
+end
+
+function !=(a::FieldPoint, b::FieldPoint)
+    return a.x!=b.x || a.field!=b.field
+end
+
+function +(a::FieldPoint, b::FieldPoint)
+    if a.field!=b.field throw(FieldMismatchException) end
+    #TODO check
+    return FieldPoint(a.x ⊻ b.x, a.field)
+end
+
+function -(a::FieldPoint, b::FieldPoint)
     return a+b
 end
 
-#TODO
-function reduce(a::Field)
+function reduce(a::FieldPoint)
+    #TODO
     return copy(a)
 end
 
-#TODO
-function *(a::Field, b::Field)
-    if a.m != b.m || a.f != b.f
-        throw(FieldMismatchException)
-    end
+function *(a::FieldPoint, b::FieldPoint)
+    if a.field!=b.field throw(FieldMismatchException) end
+    #TODO
     return copy(a)
 end
 
-#TODO
-function /(a::Field, b::Field)
-    if a.m != b.m || a.f != b.f
-        throw(FieldMismatchException)
-    end
+function /(a::FieldPoint, b::FieldPoint)
+    if a.field!=b.field throw(FieldMismatchException) end
+    #TODO
     return copy(a)
 end
 
-#TODO
-function square(a::Field)
+function square(a::FieldPoint)
+    #TODO
     return copy(a)
 end
 
-function ^(a::Field, b::Number)
-    result = copy(a)
-    while b > 0
-        if b&1
-            result *= a
-        a = square(a)
-        b -= 1
-    return result
+function ^(a::FieldPoint, b::Number)
+    #TODO
+end
+
+function random(f::Field)
+    #TODO
+    return FieldPoint(0, f)
 end
