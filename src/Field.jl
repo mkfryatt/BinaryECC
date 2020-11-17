@@ -75,7 +75,7 @@ end
 function reduce(a::FieldPoint)
     #k = order(a) - a.field.order
     #i.e. k is the number of bits of a that need to be reduced
-    k = floor(Int, log2(a.x)) - a.field.order
+    k = bits(a.x) - a.field.order
 
     #reduction(x) = x^order + t(x)
     t = a.field.reduction ⊻ (BigInt(1) << a.field.order)
@@ -107,17 +107,40 @@ function *(a::FieldPoint, b::FieldPoint)
     for i in 1:(a.field.order-1)
         if a.x & (BigInt(1)<<i) != BigInt(0)
             temp = reduce(FieldPoint(b.x << i, b.field))
-            result += temp.x
+            result ⊻= temp.x
         end
     end
 
     return FieldPoint(result, a.field)
 end
 
+#number of bits in the binary representation of this number
+function bits(a::Number)
+    return floor(Int, log2(a)) +1
+end
+
+function inv(a::FieldPoint)
+    u = a.x
+    v = a.field.reduction
+    g1 = BigInt(1)
+    g2 = BigInt(0)
+
+    while u!=BigInt(1)
+        j = bits(u) - bits(v)
+        if j<0
+            (u, v) = (v, u)
+            (g1, g2) = (g2, g1)
+            j = -j
+        end
+        u ⊻= v << j
+        g1 ⊻= g2 << j
+    end
+    return FieldPoint(g1, a.field)
+end
+
 function /(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException) end
-    #TODO
-    return copy(a)
+    return a * inv(b)
 end
 
 #add a zero between every digit of the original
@@ -155,3 +178,6 @@ function random(f::Field)
     range = BigInt(0):((BigInt(1)<<f.order)-BigInt(1))
     return FieldPoint(rand(range), f)
 end
+
+#https://mathworld.wolfram.com/IrreduciblePolynomial.html
+#f = Field(4, 19)
