@@ -1,65 +1,58 @@
 import Base: +, -, *, ==, !=, repr
 
-struct ECMismatchException <: Exception end
-
-#TODO: add supersingular version?
-struct ECAffine
+#TODO: add supersingular version? would need a "c" param
+struct ECAffine <: ECAbstract
     a::FieldPoint
     b::FieldPoint
-    field::Field
-    factor::BigInt
-    cofactor::BigInt
-    ECAffine(a::FieldPoint, b::FieldPoint, field::Field, f::Number, c::Number) =
-        new(a, b, field, convert(BigInt, f), convert(BigInt, c))
+    ECAffine(a::FieldPoint, b::FieldPoint) =
+        if a.field!=b.field throw(FieldMismatchException())
+        else new(a, b) end
 end
 
-struct ECAffinePoint
+struct ECPointAffine <: ECPointAbstract
     x::FieldPoint
     y::FieldPoint
     isId::Bool
     ec::ECAffine
-    ECAffinePoint(x::FieldPoint, y::FieldPoint, isId::Bool, ec::ECAffine) = new(x, y, isId, ec)
-    ECAffinePoint(x::FieldPoint, y::FieldPoint, ec::ECAffine) = new(x, y, false, ec)
-    ECAffinePoint(isId::Bool, ec::ECAffine) =
-        new(FieldPoint(0, ec.field), FieldPoint(0, ec.field), isId, ec)
-end
 
-function copy(ec::ECAffine)
-    ECAffine(ec.a, ec.b, ec.field, ec.factor, ec.cofactor)
-end
+    ECPointAffine(x::FieldPoint, y::FieldPoint, isId::Bool, ec::ECAffine) =
+        if x.field!=y.field || x.field!=ec.a.field throw(FieldMismatchException())
+        else new(x, y, isId, ec) end
 
-function copy(p::ECAffinePoint)
-    return ECPoint(p.x, p.y, p.isId, p.ec)
+    ECPointAffine(x::FieldPoint, y::FieldPoint, ec::ECAffine) =
+        if x.field!=y.field || x.field!=ec.a.field throw(FieldMismatchException())
+        else new(x, y, false, ec) end
+
+    ECPointAffine(ec::ECAffine) =
+        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, ec)
 end
 
 function repr(ec::ECAffine)
-    return "Equation: y^2 + xy = x^3 + "*repr(ec.a.x)*"x^2 + "*repr(ec.b.x)*"\n"*repr(ec.field)
+    return "Equation: y^2 + xy = x^3 + "*repr(ec.a.x)*"x^2 + "*repr(ec.b.x)
 end
 
-function repr(p::ECAffinePoint)
+function repr(p::ECPointAffine)
     return "("*repr(p.x)*", "*repr(p.y)*")"
 end
 
 function ==(ec1::ECAffine, ec2::ECAffine)
-    return ec1.a==ec2.a && ec1.b==ec2.b && ec1.field==ec2.field &&
-        ec1.factor==ec2.factor && ec1.cofactor==ec2.cofactor
+    return ec1.a==ec2.a && ec1.b==ec2.b && ec1.a.field==ec2.a.field
 end
 
-function ==(p1::ECAffinePoint, p2::ECAffinePoint)
+function ==(p1::ECPointAffine, p2::ECPointAffine)
     return p1.x==p2.x && p1.y==p2.y && p1.isId==p2.isId && p1.ec==p2.ec
 end
 
 function !=(ec1::ECAffine, ec2::ECAffine)
-    return ec1.a!=ec2.a || ec1.b!=ec2.b || ec1.field!=ec2.field ||
-        ec1.factor!=ec2.factor || ec1.cofactor!=ec2.cofactor
+    return ec1.a!=ec2.a || ec1.b!=ec2.b || ec1.a.field!=ec2.a.field
 end
 
-function !=(p1::ECAffinePoint, p2::ECAffinePoint)
+function !=(p1::ECPointAffine, p2::ECPointAffine)
     return p1.x!=p2.x || p1.y!=p2.y || p1.isId!=p2.isId || p1.ec!=p2.ec
 end
 
-function +(p1::ECAffinePoint, p2::ECAffinePoint)
-    if p1.ec!=p2.ec throw(ECMismatchException) end
+function +(p1::ECPointAffine, p2::ECPointAffine)
+    if p1.ec!=p2.ec throw(ECMismatchException()) end
     if p1.isId return p2 end
     if p2.isId return p1 end
     if p1==p2 return double(p1) end
@@ -67,32 +60,32 @@ function +(p1::ECAffinePoint, p2::ECAffinePoint)
     lambda = (p1.y+p2.y) / (p1.x +p2.x)
     x_new = lambda^2 + lambda + p1.x + p2.x + p1.ec.a
     y_new = lambda*(p1.x+x_new) + x_new + p1.y
-    return ECAffinePoint(x_new, y_new, p1.ec)
+    return ECPointAffine(x_new, y_new, p1.ec)
 end
 
-function -(p::ECAffinePoint)
+function -(p::ECPointAffine)
     if p.isId return p end
-    return ECAffinePoint(p.x, p.x+p.y, p.ec)
+    return ECPointAffine(p.x, p.x+p.y, p.ec)
 end
 
-function -(p1::ECAffinePoint, p2::ECAffinePoint)
+function -(p1::ECPointAffine, p2::ECPointAffine)
     return p1 + (-p2)
 end
 
-function double(p::ECAffinePoint)
+function double(p::ECPointAffine)
     if p.isId return p end
 
     lambda = p1.x + (p1.y / p1.x)
     x_new = lambda^2 + lambda + p1.ec.a
     y_new = p1.x^2 + lambda*x_new + x_new
-    return ECAffinePoint(x_new, y_new, p.ec)
+    return ECPointAffine(x_new, y_new, p.ec)
 end
 
-function *(p::ECAffinePoint, n::Number)
+function *(p::ECPointAffine, n::Number)
     if p.isId return p end
     if n==1 return p end
 
-    result = ECAffinePoint(true, p.ec)
+    result = ECPointAffine(p.ec)
     doubling = p
     while n>0
         if n&1==1
@@ -104,9 +97,34 @@ function *(p::ECAffinePoint, n::Number)
     return result
 end
 
-function isValid(p::ECAffinePoint)
+function is_valid(p::ECPointAffine)
     return p.isId || (p.y^2 + p.x*p.y == p.x^3 + p.ec.a*p.x^2 + p.ec.b)
 end
+
+#sec1v2 2.3.4
+function from_octet_string(s::String, ec::ECAffine)
+    #point is id
+    if s=="00" return ECPointAffine(ec) end
+
+    #input string is not of the uncompressed format specified by sec1v2
+    if length(s) != 4*floor(Int16, ec.a.field.order / 8)+2
+        throw(ArgumentError("Octet string is of the wrong length for this curve."))
+    end
+    if s[1:2]!="04"
+        throw(ArgumentError("Octet string must start with '04'.")) 
+    end
+
+    #TODO handle compressed format
+
+    x = from_octet_string(s[3:2+2*floor(Int16, ec.a.field.order / 8)], ec.a.field)
+    y = from_octet_string(s[3+2*floor(Int16, ec.a.field.order / 8):2+4*floor(Int16, ec.a.field.order / 8)], ec.a.field)
+
+    return ECPointAffine(x, y, ec)
+end
+
+#TODO random point on curve
+#TODO find y coord given x
+#TODO find x coord given y
 
 #f = Field(4, 19)
 #a = 8, b = 9

@@ -11,7 +11,8 @@ end
 struct FieldPoint
     x::BigInt
     field::Field
-    FieldPoint(x::Number, m::Number, f::Number) = FieldPoint(convert(BigInt, x), Field(m, f))
+    FieldPoint(x::Number, m::Number, f::Number) =
+        FieldPoint(convert(BigInt, x), Field(m, f))
     FieldPoint(x::Number, field::Field) = new(convert(BigInt, x), field)
 end
 
@@ -64,7 +65,7 @@ function !=(a::FieldPoint, b::FieldPoint)
 end
 
 function +(a::FieldPoint, b::FieldPoint)
-    if a.field!=b.field throw(FieldMismatchException) end
+    if a.field!=b.field throw(FieldMismatchException()) end
     return FieldPoint(a.x ⊻ b.x, a.field)
 end
 
@@ -96,7 +97,7 @@ end
 
 #left to right, shift and add
 function *(a::FieldPoint, b::FieldPoint)
-    if a.field!=b.field throw(FieldMismatchException) end
+    if a.field!=b.field throw(FieldMismatchException()) end
 
     if a.x & BigInt(1) != BigInt(0)
         result = b.x
@@ -111,7 +112,7 @@ function *(a::FieldPoint, b::FieldPoint)
         end
     end
 
-    return FieldPoint(result, a.field)
+    return reduce(FieldPoint(result, a.field))
 end
 
 #number of bits in the binary representation of this number
@@ -120,6 +121,8 @@ function bits(a::Number)
 end
 
 function inv(a::FieldPoint)
+    if a.x==0 throw(DivideError()) end
+
     u = a.x
     v = a.field.reduction
     g1 = BigInt(1)
@@ -139,7 +142,7 @@ function inv(a::FieldPoint)
 end
 
 function /(a::FieldPoint, b::FieldPoint)
-    if a.field!=b.field throw(FieldMismatchException) end
+    if a.field!=b.field throw(FieldMismatchException()) end
     return a * inv(b)
 end
 
@@ -179,5 +182,18 @@ function random(f::Field)
     return FieldPoint(rand(range), f)
 end
 
-#https://mathworld.wolfram.com/IrreduciblePolynomial.html
-#f = Field(4, 19)
+#sec1v2 2.3.6
+function from_octet_string(s::String, f::Field)
+    if length(s)!=floor(f.order / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
+    #TODO
+    return FieldPoint(value, f)
+end
+
+#sec2 v2, table 3:
+const FIELD163 = Field(163, (BigInt(1)<<163) + BigInt(128+64+8+1))
+const FIELD233 = Field(233, (BigInt(1)<<233) + (BigInt(1)<<74) + BigInt(1))
+const FIELD239A = Field(239, (BigInt(1)<<239) + (BigInt(1)<<36) + BigInt(1))
+const FIELD239B = Field(239, (BigInt(1)<<239) + (BigInt(1)<<158) + BigInt(1))
+const FIELD283 = Field(283, (BigInt(1)<<283) + (BigInt(1)<<12) + BigInt(128+32+1))
+const FIELD409 = Field(409, (BigInt(1)<<409) + (BigInt(1)<<87) + BigInt(1))
+const FIELD571 = Field(571, (BigInt(1)<<571) + (BigInt(1)<<10) + BigInt(32+4+1))
