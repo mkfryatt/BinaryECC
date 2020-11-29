@@ -27,6 +27,29 @@ struct ECPointAffine <: ECPointAbstract
         new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, ec)
 end
 
+#sec1v2 2.3.4
+function ECPointAffine(s::String, ec::ECAffine)
+    s = replace(s, " " => "")
+
+    #point is id
+    if s=="00" return ECPointAffine(ec) end
+
+    #input string is not of the uncompressed format specified by sec1v2
+    if length(s) != 4*ceil(Int16, ec.a.field.order / 8)+2
+        throw(ArgumentError("Octet string is of the wrong length for this curve."))
+    end
+    if s[1:2]!="04"
+        throw(ArgumentError("Octet string must start with '04'."))
+    end
+
+    #TODO handle compressed format
+
+    x = FieldPoint(s[3:4+2*floor(Int16, ec.a.field.order / 8)], ec.a.field)
+    y = FieldPoint(s[5+2*floor(Int16, ec.a.field.order / 8):6+4*floor(Int16, ec.a.field.order / 8)], ec.a.field)
+
+    return ECPointAffine(x, y, ec)
+end
+
 function repr(ec::ECAffine)
     return "Equation: y^2 + xy = x^3 + "*repr(ec.a.x)*"x^2 + "*repr(ec.b.x)
 end
@@ -84,6 +107,7 @@ end
 
 function *(p::ECPointAffine, n::Integer)
     if p.isId return p end
+    if n==0 return ECPointAffine(p.ec) end
     if n==1 return p end
 
     result = ECPointAffine(p.ec)
@@ -105,35 +129,3 @@ end
 function is_valid(p::ECPointAffine)
     return p.isId || (p.y^2 + p.x*p.y == p.x^3 + p.ec.a*p.x^2 + p.ec.b)
 end
-
-#sec1v2 2.3.4
-function ECPointAffine(s::String, ec::ECAffine)
-    s = replace(s, " " => "")
-    s = replace(s, "\n" => "")
-
-    #point is id
-    if s=="00" return ECPointAffine(ec) end
-
-    #input string is not of the uncompressed format specified by sec1v2
-    if length(s) != 4*ceil(Int16, ec.a.field.order / 8)+2
-        throw(ArgumentError("Octet string is of the wrong length for this curve."))
-    end
-    if s[1:2]!="04"
-        throw(ArgumentError("Octet string must start with '04'."))
-    end
-
-    #TODO handle compressed format
-
-    x = FieldPoint(s[3:4+2*floor(Int16, ec.a.field.order / 8)], ec.a.field)
-    y = FieldPoint(s[5+2*floor(Int16, ec.a.field.order / 8):6+4*floor(Int16, ec.a.field.order / 8)], ec.a.field)
-
-    return ECPointAffine(x, y, ec)
-end
-
-#TODO random point on curve
-#TODO find y coord given x
-#TODO find x coord given y
-
-#f = Field(4, 19)
-#a = 8, b = 9
-#valid point = (3, 12)

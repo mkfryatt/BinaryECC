@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand, ceil
+import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand, ceil, sqrt
 
 struct FieldMismatchException <: Exception end
 
@@ -19,7 +19,6 @@ end
 #sec1v2 2.3.6
 function FieldPoint(s::String, f::Field)
     s = replace(s, " " => "")
-    s = replace(s, "\n" => "")
     if length(s)!=ceil(f.order / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
     value = parse(BigInt, s, base=16)
     return FieldPoint(value, f)
@@ -67,6 +66,8 @@ end
 
 function +(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
+    a = reduce(a)
+    b = reduce(b)
     return FieldPoint(a.x ⊻ b.x, a.field)
 end
 
@@ -74,7 +75,13 @@ function -(a::FieldPoint, b::FieldPoint)
     return a+b
 end
 
+function -(a::FieldPoint)
+    return a
+end
+
 function reduce(a::FieldPoint)
+    if a.x<(BigInt(1)<<a.field.order) return a end
+
     #k = order(a) - a.field.order
     #i.e. k is the number of bits of a that need to be reduced
     k = bits(a.x) - a.field.order
@@ -87,7 +94,7 @@ function reduce(a::FieldPoint)
     result = a.x
 
     for i in k:-1:0
-        if a.x & (BigInt(1) << (a.field.order+i)) != BigInt(0)
+        if result & (BigInt(1) << (a.field.order+i)) != BigInt(0)
             result ⊻= t + (BigInt(1)<<(a.field.order+i))
         end
         t >>>= 1
@@ -99,6 +106,8 @@ end
 #left to right, shift and add
 function *(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
+    a = reduce(a)
+    b = reduce(b)
 
     if a.x & BigInt(1) != BigInt(0)
         result = b.x
@@ -122,6 +131,7 @@ function bits(a::Integer)
 end
 
 function inv(a::FieldPoint)
+    a = reduce(a)
     if a.x==0 throw(DivideError()) end
 
     u = a.x
@@ -149,8 +159,8 @@ end
 
 #add a zero between every digit of the original
 function square(a::FieldPoint)
+    a = reduce(a)
     result = BigInt(0)
-
     counter = BigInt(1)
     for i in 0:(a.field.order-1)
         if a.x & counter != BigInt(0)
@@ -164,10 +174,12 @@ end
 
 #square and multiply method
 function ^(a::FieldPoint, b::Integer)
+    a = reduce(a)
+
     result = FieldPoint(1, a.field)
     squaring = a
 
-    while b>0
+    while b>BigInt(0)
         if b & BigInt(1) == BigInt(1)
             result *= squaring
         end
@@ -176,6 +188,10 @@ function ^(a::FieldPoint, b::Integer)
     end
 
     return result
+end
+
+function sqrt(a::FieldPoint)
+    return a^(BigInt(1)<<(a.field.order-1))
 end
 
 function random(f::Field)
