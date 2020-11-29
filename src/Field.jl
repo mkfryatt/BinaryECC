@@ -1,27 +1,28 @@
-import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand
+import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand, ceil
 
 struct FieldMismatchException <: Exception end
 
 struct Field
     order::Int16 #the order of the field
     reduction::BigInt #the reduction polynomial
-    Field(m::Number, f::Number) = new(convert(Int16, m), convert(BigInt, f))
+    Field(m::Integer, f::Integer) = new(convert(Int16, m), convert(BigInt, f))
 end
 
 struct FieldPoint
     x::BigInt
     field::Field
-    FieldPoint(x::Number, m::Number, f::Number) =
+    FieldPoint(x::Integer, m::Integer, f::Integer) =
         FieldPoint(convert(BigInt, x), Field(m, f))
-    FieldPoint(x::Number, field::Field) = new(convert(BigInt, x), field)
+    FieldPoint(x::Integer, field::Field) = new(convert(BigInt, x), field)
 end
 
-function copy(f::Field)
-    return Field(f.order, f.reduction)
-end
-
-function copy(a::FieldPoint)
-    return FieldPoint(a.x, a.field)
+#sec1v2 2.3.6
+function FieldPoint(s::String, f::Field)
+    s = replace(s, " " => "")
+    s = replace(s, "\n" => "")
+    if length(s)!=ceil(f.order / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
+    value = parse(BigInt, s, base=16)
+    return FieldPoint(value, f)
 end
 
 function repr(f::Field)
@@ -116,7 +117,7 @@ function *(a::FieldPoint, b::FieldPoint)
 end
 
 #number of bits in the binary representation of this number
-function bits(a::Number)
+function bits(a::Integer)
     return floor(Int, log2(a)) +1
 end
 
@@ -162,7 +163,7 @@ function square(a::FieldPoint)
 end
 
 #square and multiply method
-function ^(a::FieldPoint, b::Int)
+function ^(a::FieldPoint, b::Integer)
     result = FieldPoint(1, a.field)
     squaring = a
 
@@ -180,13 +181,6 @@ end
 function random(f::Field)
     range = BigInt(0):((BigInt(1)<<f.order)-BigInt(1))
     return FieldPoint(rand(range), f)
-end
-
-#sec1v2 2.3.6
-function from_octet_string(s::String, f::Field)
-    if length(s)!=floor(f.order / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
-    #TODO
-    return FieldPoint(value, f)
 end
 
 #sec2 v2, table 3:
