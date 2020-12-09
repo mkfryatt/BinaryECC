@@ -1,6 +1,5 @@
-import Base: +, -, *, ==, !=, repr, ceil
+import Base: +, -, *, ==, !=, repr, ceil, convert
 
-#TODO: add supersingular version? would need a "c" param
 struct ECAffine <: ECAbstract
     a::FieldPoint
     b::FieldPoint
@@ -9,27 +8,36 @@ struct ECAffine <: ECAbstract
         else new(a, b) end
 end
 
+function convert(::Type{ECAffine}, ec::ECAbstract)
+    return ECAffine(ec.a, ec.b)
+end
+
+function repr(ec::ECAffine)
+    return "E: y² + xy = x³ + "*repr(ec.a.x)*"x² + "*repr(ec.b.x)
+end
+
 struct ECPointAffine <: ECPointAbstract
     x::FieldPoint
     y::FieldPoint
     isId::Bool
     ec::ECAffine
 
-    ECPointAffine(x::FieldPoint, y::FieldPoint, isId::Bool, ec::ECAffine) =
+    ECPointAffine(x::FieldPoint, y::FieldPoint, isId::Bool, ec::ECAbstract) =
         if x.field!=y.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, isId, ec) end
+        else new(x, y, isId, convert(ECAffine, ec)) end
 
-    ECPointAffine(x::FieldPoint, y::FieldPoint, ec::ECAffine) =
+    ECPointAffine(x::FieldPoint, y::FieldPoint, ec::ECAbstract) =
         if x.field!=y.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, false, ec) end
+        else new(x, y, false, convert(ECAffine, ec)) end
 
-    ECPointAffine(ec::ECAffine) =
-        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, ec)
+    ECPointAffine(ec::ECAbstract) =
+        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, convert(ECAffine, ec))
 end
 
 #sec1v2 2.3.4
-function ECPointAffine(s::String, ec::ECAffine)
+function ECPointAffine(s::String, ec::ECAbstract)
     s = replace(s, " " => "")
+    ec = convert(ECAffine, ec)
 
     #point is id
     if s=="00" return ECPointAffine(ec) end
@@ -50,24 +58,12 @@ function ECPointAffine(s::String, ec::ECAffine)
     return ECPointAffine(x, y, ec)
 end
 
-function repr(ec::ECAffine)
-    return "Equation: y^2 + xy = x^3 + "*repr(ec.a.x)*"x^2 + "*repr(ec.b.x)
-end
-
 function repr(p::ECPointAffine)
     return "("*repr(p.x)*", "*repr(p.y)*")"
 end
 
-function ==(ec1::ECAffine, ec2::ECAffine)
-    return ec1.a==ec2.a && ec1.b==ec2.b && ec1.a.field==ec2.a.field
-end
-
 function ==(p1::ECPointAffine, p2::ECPointAffine)
     return p1.x==p2.x && p1.y==p2.y && p1.isId==p2.isId && p1.ec==p2.ec
-end
-
-function !=(ec1::ECAffine, ec2::ECAffine)
-    return ec1.a!=ec2.a || ec1.b!=ec2.b || ec1.a.field!=ec2.a.field
 end
 
 function !=(p1::ECPointAffine, p2::ECPointAffine)
@@ -92,12 +88,9 @@ function -(p::ECPointAffine)
     return ECPointAffine(p.x, p.x+p.y, p.ec)
 end
 
-function -(p1::ECPointAffine, p2::ECPointAffine)
-    return p1 + (-p2)
-end
-
 function double(p::ECPointAffine)
     if p.isId return p end
+    if p==-p return ECPointAffine(p.ec) end
 
     lambda = p.x + (p.y / p.x)
     x_new = lambda^2 + lambda + p.ec.a
@@ -120,10 +113,6 @@ function *(p::ECPointAffine, n::Integer)
         n >>= 1
     end
     return result
-end
-
-function *(n::Integer, p::ECPointAffine)
-    return p*n
 end
 
 function is_valid(p::ECPointAffine)

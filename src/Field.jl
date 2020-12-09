@@ -87,6 +87,7 @@ function reduce(a::FieldPoint)
     k = bits(a.x) - a.field.order
 
     #reduction(x) = x^order + t(x)
+    #ie get rid of the largest bit in the reduction polynomial
     t = a.field.reduction ⊻ (BigInt(1) << a.field.order)
     #now shift t left, and the loop will slowly shift it back down again
     t <<= k
@@ -103,7 +104,7 @@ function reduce(a::FieldPoint)
     return FieldPoint(result, a.field)
 end
 
-#left to right, shift and add
+#right to left, shift and add
 function *(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
     a = reduce(a)
@@ -197,6 +198,10 @@ end
 function random(f::Field)
     range = BigInt(0):((BigInt(1)<<f.order)-BigInt(1))
     return FieldPoint(rand(range), f)
+end
+
+function iszero(a::FieldPoint)
+    return a.x==0
 end
 
 #sec2 v2, table 3:
