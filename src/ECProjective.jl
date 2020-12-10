@@ -1,4 +1,4 @@
-import Base: +, -, *, ==, !=, repr, ceil, convert
+import Base: +, -, *, ==, !=, repr, convert
 
 struct ECProjective <: ECAbstract
     a::FieldPoint

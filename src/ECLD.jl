@@ -1,4 +1,4 @@
-import Base: +, -, *, ==, !=, repr, ceil
+import Base: +, -, *, ==, !=, repr, convert
 
 struct ECLD <: ECAbstract
     a::FieldPoint
@@ -53,7 +53,29 @@ function +(p1::ECPointLD, p2::ECPointLD)
     if p2.isId return p1 end
     if p1==-p2 return ECPointLD(p1.ec) end
     if p1==p2 return double(p1) end
-    #TODO
+
+    #Adds: 8
+    #Mults: 16
+    #Sqrs: 4
+    #Invs: 0
+
+    A = p1.y*p2.z^2 + p2.y*p1.z^2
+    C = p1.x*p2.z + p2.x*p1.z
+    D = p2.z*C
+    B = p1.z*D
+
+    z3 = B^2
+    if iszero(z3) return ECPointLD(p1.ec) end
+
+    x3 = A*(A+B) + B*(C^2 + p1.ec.a*B)
+
+    t = x3*p1.z
+
+    y3 = A*(p1.x*z3 + t) + (t*p1.z + p1.y*z3)*D
+    y3 *= D
+    if iszero(y3) return ECPointLD(p1.ec) end
+
+    return ECPointLD(x3, y3, z3, p1.ec)
 end
 
 function -(p::ECPointLD)
@@ -64,7 +86,27 @@ end
 function double(p::ECPointLD)
     if p.isId return p end
     if p==-p return ECPointLD(p.ec) end
-    #TODO
+
+    #Adds: 4
+    #Mults: 6
+    #Sqrs: 3
+    #Invs: 0
+
+    x_2 = p.x^2
+    A = x_2 + p.y
+    B = p.x*p.z
+
+    z_new = B^2
+    if iszero(z_new) return ECPointLD(p.ec) end
+
+    AB = A+B
+
+    x_new = A*AB + p.ec.a*z_new
+
+    y_new = x_2^2 * z_new + x_new*B*AB
+    if iszero(y_new) return ECPointLD(p.ec) end
+
+    return ECPointLD(x_new, y_new, z_new, p.ec)
 end
 
 function *(p::ECPointLD, n::Integer)

@@ -77,10 +77,15 @@ function +(p1::ECPointAffine, p2::ECPointAffine)
     if p1==-p2 return ECPointAffine(p1.ec) end
     if p1==p2 return double(p1) end
 
-    lambda = (p1.y+p2.y) / (p1.x +p2.x)
-    x_new = lambda^2 + lambda + p1.x + p2.x + p1.ec.a
-    y_new = lambda*(p1.x+x_new) + x_new + p1.y
-    return ECPointAffine(x_new, y_new, p1.ec)
+    #Adds: 8
+    #Mults: 2
+    #Sqrs: 1
+    #Invs: 1
+    x1x2 = p1.x + p2.x
+    lambda = (p1.y+p2.y) / x1x2
+    x3 = lambda^2 + lambda + x1x2 + p1.ec.a
+    y3 = lambda*(p1.x+x_new) + x3 + p1.y
+    return ECPointAffine(x3, y3, p1.ec)
 end
 
 function -(p::ECPointAffine)
@@ -92,6 +97,10 @@ function double(p::ECPointAffine)
     if p.isId return p end
     if p==-p return ECPointAffine(p.ec) end
 
+    #Adds: 5
+    #Mults: 2
+    #Sqrs: 2
+    #Invs: 1
     lambda = p.x + (p.y / p.x)
     x_new = lambda^2 + lambda + p.ec.a
     y_new = p.x^2 + lambda*x_new + x_new

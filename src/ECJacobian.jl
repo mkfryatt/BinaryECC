@@ -1,4 +1,4 @@
-import Base: +, -, *, ==, !=, repr, ceil
+import Base: +, -, *, ==, !=, repr, convert
 
 struct ECJacobian <: ECAbstract
     a::FieldPoint
@@ -54,27 +54,29 @@ function +(p1::ECPointJacobian, p2::ECPointJacobian)
     if p1==-p2 return ECPointJacobian(p1.ec) end
     if p1==p2 return double(p1) end
 
-    A = p1.y*p2.z^3 + p2.y*p1.z^3
-    B = p1.x*p1.z*p2.z^3 + p2.x*p1.z^3*p2.z
+    #Adds: 8
+    #Mults: 20
+    #Sqrs: 6
+    #Invs: 0
 
-    z_new = B * p1.z^3 * p2.z
-    if iszero(z_new) return ECPointJacobian(p1.ec) end
+    z1_2 = p1.z^2
+    z2_2 = p2.z^2
+    A = p1.y*p2.z*z2_2 + p2.y*p1.z*z1_2
+    C = p1.x*z2_2 + p2.x*z1_2
+    B = p1.z * p2.z * C
 
-    B2 = B^2
+    z3 = B * z1_2
+    if iszero(z3) return ECPointJacobian(p1.ec) end
 
-    z1z2_2 = (p1.z*p2.z)^2
+    x3 = A*(A+B) + C^3 + p1.ec.a*B^2
+    x3 *= z1_2^2
 
-    x_new = A*z1z2_2*(A+B)
-    x_new += B2*(p1.x*p2.z^2 + p2.x*p1.z^2)
-    x_new += p1.ec.a*B2*z1z2_2
-    x_new *= p1.z^4
+    z3_2 = z3^2
+    t = x3*z1_2
+    y3 = A*(p1.x*z3_2 + t)
+    y3 += C*p2.z*(t*p1.z + p1.y*z3_2)
 
-    y_new = A * p1.x * p1.z * z_new^2
-    y_new += (A+B) * x_new * p1.z^3
-    y_new += B * p1.y * z_new^2
-    y_new *= p2.z
-
-    return ECPointJacobian(x_new, y_new, z_new, p1.ec)
+    return ECPointJacobian(x3, y3, z3, p1.ec)
 end
 
 function -(p::ECPointJacobian)
@@ -86,17 +88,23 @@ function double(p::ECPointJacobian)
     if p.isId return p end
     if p==-p return ECPointJacobian(p.ec) end
 
+    #Adds: 5
+    #Mults: 10
+    #Sqrs: 6
+    #Invs: 0
+
+    z_2 = p.z^2
     A = p.x^2 + p.y*p.z
-    B = p.x*p.z^2
+    B = p.x*z_2
 
-    z4 = p.z^4
+    z_4 = z_2^2
 
-    z_new = B*z4
+    z_new = B*z_4
     if iszero(z_new) return ECPointJacobian(p.ec) end
 
     x_new = A*(A+B)
     x_new += p.ec.a * B^2
-    x_new *= z4^2
+    x_new *= z_4^2
 
     y_new = B * (p.x*z_new)^2
     y_new += (A+B)*x_new*z4
