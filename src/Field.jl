@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand, ceil, sqrt
+import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand, ceil, sqrt, iszero
 
 struct FieldMismatchException <: Exception end
 
