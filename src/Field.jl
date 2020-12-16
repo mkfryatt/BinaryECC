@@ -1,11 +1,20 @@
-import Base: +, -, *, /, ^, ==, !=, repr, inv, log2, floor, rand, ceil, sqrt, iszero
+import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero
+using Base: log2, floor, rand, ceil
 
 struct FieldMismatchException <: Exception end
 
 struct Field
-    order::Int16 #the order of the field
+    order::Int16 #the degree of the polynomial
     reduction::BigInt #the reduction polynomial
     Field(m::Integer, f::Integer) = new(convert(Int16, m), convert(BigInt, f))
+end
+
+function repr(f::Field)
+    return "Degree: "*repr(f.order)*"\nReduction: "*repr(f.reduction)
+end
+
+function ==(a::Field, b::Field)
+    return a.order==b.order && a.reduction==b.reduction
 end
 
 struct FieldPoint
@@ -24,50 +33,32 @@ function FieldPoint(s::String, f::Field)
     return FieldPoint(value, f)
 end
 
-function repr(f::Field)
-    return "Order: "*repr(f.order)*"\nReduction: "*repr(f.reduction)
-end
-
 function repr(a::FieldPoint)
-    res = ""
+    acc = ""
     i = 0
     val = a.x
     while val > 0
         if val & BigInt(1) > BigInt(0)
             if i==0
-                res = "1"
-            elseif res==""
-                res = "x^"*repr(i)
+                acc = "1"
+            elseif acc==""
+                acc = "x^"*repr(i)
             else
-                res = "x^"*repr(i)*" + "*res
+                acc = "x^"*repr(i)*" + "*acc
             end
         end
         i += 1
         val >>>= BigInt(1)
     end
-    return res
-end
-
-function ==(a::Field, b::Field)
-    return a.order==b.order && a.reduction==b.reduction
+    return acc
 end
 
 function ==(a::FieldPoint, b::FieldPoint)
     return a.x==b.x && a.field==b.field
 end
 
-function !=(a::Field, b::Field)
-    return a.order!=b.order || a.reduction!=b.reduction
-end
-
-function !=(a::FieldPoint, b::FieldPoint)
-    return a.x!=b.x || a.field!=b.field
-end
-
 function +(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
-    a = reduce(a)
-    b = reduce(b)
     return FieldPoint(a.x ⊻ b.x, a.field)
 end
 
@@ -107,23 +98,21 @@ end
 #right to left, shift and add
 function *(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
-    a = reduce(a)
-    b = reduce(b)
 
     if a.x & BigInt(1) != BigInt(0)
-        result = b.x
+        c = b.x
     else
-        result = BigInt(0)
+        c = BigInt(0)
     end
 
     for i in 1:(a.field.order-1)
         if a.x & (BigInt(1)<<i) != BigInt(0)
             temp = reduce(FieldPoint(b.x << i, b.field))
-            result ⊻= temp.x
+            c ⊻= temp.x
         end
     end
 
-    return reduce(FieldPoint(result, a.field))
+    return reduce(FieldPoint(c, a.field))
 end
 
 #number of bits in the binary representation of this number
@@ -132,7 +121,6 @@ function bits(a::Integer)
 end
 
 function inv(a::FieldPoint)
-    a = reduce(a)
     if a.x==0 throw(DivideError()) end
 
     u = a.x
@@ -150,7 +138,7 @@ function inv(a::FieldPoint)
         u ⊻= v << j
         g1 ⊻= g2 << j
     end
-    return FieldPoint(g1, a.field)
+    return reduce(FieldPoint(g1, a.field)) #TODO is this reduce needed?
 end
 
 function /(a::FieldPoint, b::FieldPoint)

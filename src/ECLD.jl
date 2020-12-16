@@ -1,38 +1,21 @@
-import Base: +, -, *, ==, !=, repr, convert
+import Base: +, -, *, ==, repr, isvalid, iszero
 
-struct ECLD <: ECAbstract
-    a::FieldPoint
-    b::FieldPoint
-    ECLD(a::FieldPoint, b::FieldPoint) =
-        if a.field!=b.field throw(FieldMismatchException())
-        else new(a, b) end
-end
-
-function convert(::Type{ECLD}, ec::ECAbstract)
-    return ECLD(ec.a, ec.b)
-end
-
-function repr(ec::ECLD)
-    return "E: y² + xyz = x³z + "*repr(ec.a.x)*"x²z² + "*repr(ec.b.x)*"z⁴"
-end
-
-struct ECPointLD <: ECPointAbstract
+struct ECPointLD <: AbstractECPoint
     x::FieldPoint
     y::FieldPoint
     z::FieldPoint
-    isId::Bool
-    ec::ECLD
+    ec::EC
 
-    ECPointLD(x::FieldPoint, y::FieldPoint, z::FieldPoint, isId::Bool, ec::ECAbstract) =
+    ECPointLD(x::FieldPoint, y::FieldPoint, z::FieldPoint, ec::EC) =
         if x.field!=y.field || x.field!=z.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, z, isId, convert(ECLD, ec)) end
+        else new(x, y, z, ec) end
 
-    ECPointLD(x::FieldPoint, y::FieldPoint, z::FieldPoint, ec::ECAbstract) =
+    ECPointLD(x::FieldPoint, y::FieldPoint, z::FieldPoint, ec::EC) =
         if x.field!=y.field || x.field!=z.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, z, false, convert(ECLD, ec)) end
+        else new(x, y, z, ec) end
 
-    ECPointLD(ec::ECAbstract) =
-        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, convert(ECLD, ec))
+    ECPointLD(ec::EC) =
+        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), ec)
 end
 
 function repr(p::ECPointLD)
@@ -40,17 +23,13 @@ function repr(p::ECPointLD)
 end
 
 function ==(p1::ECPointLD, p2::ECPointLD)
-    return p1.isId==p2.isId && p1.ec==p2.ec && p1.x*p2.z==p2.x*p1.z && p1.y*p2.z^2==p2.y*p1.z^2
-end
-
-function !=(p1::ECPointLD, p2::ECPointLD)
-    return p1.isId!=p2.isId || p1.ec!=p2.ec || p1.x*p2.z!=p2.x*p1.z || p1.y*p2.z^2!=p2.y*p1.z^2
+    return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*p2.z==p2.x*p1.z && p1.y*p2.z^2==p2.y*p1.z^2
 end
 
 function +(p1::ECPointLD, p2::ECPointLD)
     if p1.ec!=p2.ec throw(ECMismatchException()) end
-    if p1.isId return p2 end
-    if p2.isId return p1 end
+    if iszero(p1) return p2 end
+    if iszero(p2) return p1 end
     if p1==-p2 return ECPointLD(p1.ec) end
     if p1==p2 return double(p1) end
 
@@ -79,12 +58,12 @@ function +(p1::ECPointLD, p2::ECPointLD)
 end
 
 function -(p::ECPointLD)
-    if p.isId return p end
+    if iszero(p) return p end
     return ECPointLD(p.x, p.x+p.y, p.z, p.ec)
 end
 
 function double(p::ECPointLD)
-    if p.isId return p end
+    if iszero(p) return p end
     if p==-p return ECPointLD(p.ec) end
 
     #Adds: 4
@@ -110,7 +89,7 @@ function double(p::ECPointLD)
 end
 
 function *(p::ECPointLD, n::Integer)
-    if p.isId return p end
+    if iszero(p) return p end
     if n==0 return ECPointLD(p.ec) end
     if n==1 return p end
 
@@ -126,6 +105,10 @@ function *(p::ECPointLD, n::Integer)
     return result
 end
 
-function is_valid(p::ECPointLD)
-    return p.isId || (p.y^2 + p.x*p.y*p.z == p.x^3*p.z + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^4)
+function isvalid(p::ECPointLD)
+    return iszero(p) || (p.y^2 + p.x*p.y*p.z == p.x^3*p.z + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^4)
+end
+
+function iszero(p::ECPointLD)
+    return iszero(p.y) && iszero(p.z)
 end

@@ -1,43 +1,27 @@
-import Base: +, -, *, ==, !=, repr, ceil, convert
+import Base: +, -, *, ==, repr, isvalid, iszero
+using Base: ceil
 
-struct ECAffine <: ECAbstract
-    a::FieldPoint
-    b::FieldPoint
-    ECAffine(a::FieldPoint, b::FieldPoint) =
-        if a.field!=b.field throw(FieldMismatchException())
-        else new(a, b) end
-end
-
-function convert(::Type{ECAffine}, ec::ECAbstract)
-    return ECAffine(ec.a, ec.b)
-end
-
-function repr(ec::ECAffine)
-    return "E: y² + xy = x³ + "*repr(ec.a.x)*"x² + "*repr(ec.b.x)
-end
-
-struct ECPointAffine <: ECPointAbstract
+struct ECPointAffine <: AbstractECPoint
     x::FieldPoint
     y::FieldPoint
     isId::Bool
-    ec::ECAffine
+    ec::EC
 
-    ECPointAffine(x::FieldPoint, y::FieldPoint, isId::Bool, ec::ECAbstract) =
+    ECPointAffine(x::FieldPoint, y::FieldPoint, isId::Bool, ec::EC) =
         if x.field!=y.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, isId, convert(ECAffine, ec)) end
+        else new(x, y, isId, ec) end
 
-    ECPointAffine(x::FieldPoint, y::FieldPoint, ec::ECAbstract) =
+    ECPointAffine(x::FieldPoint, y::FieldPoint, ec::EC) =
         if x.field!=y.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, false, convert(ECAffine, ec)) end
+        else new(x, y, false, ec) end
 
-    ECPointAffine(ec::ECAbstract) =
-        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, convert(ECAffine, ec))
+    ECPointAffine(ec::EC) =
+        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, ec)
 end
 
 #sec1v2 2.3.4
-function ECPointAffine(s::String, ec::ECAbstract)
+function ECPointAffine(s::String, ec::EC)
     s = replace(s, " " => "")
-    ec = convert(ECAffine, ec)
 
     #point is id
     if s=="00" return ECPointAffine(ec) end
@@ -63,17 +47,13 @@ function repr(p::ECPointAffine)
 end
 
 function ==(p1::ECPointAffine, p2::ECPointAffine)
-    return p1.x==p2.x && p1.y==p2.y && p1.isId==p2.isId && p1.ec==p2.ec
-end
-
-function !=(p1::ECPointAffine, p2::ECPointAffine)
-    return p1.x!=p2.x || p1.y!=p2.y || p1.isId!=p2.isId || p1.ec!=p2.ec
+    return p1.x==p2.x && p1.y==p2.y && iszero(p1)==iszero(p2) && p1.ec==p2.ec
 end
 
 function +(p1::ECPointAffine, p2::ECPointAffine)
     if p1.ec!=p2.ec throw(ECMismatchException()) end
-    if p1.isId return p2 end
-    if p2.isId return p1 end
+    if iszero(p1) return p2 end
+    if iszero(p2) return p1 end
     if p1==-p2 return ECPointAffine(p1.ec) end
     if p1==p2 return double(p1) end
 
@@ -89,12 +69,12 @@ function +(p1::ECPointAffine, p2::ECPointAffine)
 end
 
 function -(p::ECPointAffine)
-    if p.isId return p end
+    if iszero(p) return p end
     return ECPointAffine(p.x, p.x+p.y, p.ec)
 end
 
 function double(p::ECPointAffine)
-    if p.isId return p end
+    if iszero(p) return p end
     if p==-p return ECPointAffine(p.ec) end
 
     #Adds: 5
@@ -108,7 +88,7 @@ function double(p::ECPointAffine)
 end
 
 function *(p::ECPointAffine, n::Integer)
-    if p.isId return p end
+    if iszero(p) return p end
     if n==0 return ECPointAffine(p.ec) end
     if n==1 return p end
 
@@ -124,6 +104,10 @@ function *(p::ECPointAffine, n::Integer)
     return result
 end
 
-function is_valid(p::ECPointAffine)
-    return p.isId || (p.y^2 + p.x*p.y == p.x^3 + p.ec.a*p.x^2 + p.ec.b)
+function isvalid(p::ECPointAffine)
+    return iszero(p) || (p.y^2 + p.x*p.y == p.x^3 + p.ec.a*p.x^2 + p.ec.b)
+end
+
+function iszero(p::ECPointAffine)
+    return p.isId
 end

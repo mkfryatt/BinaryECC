@@ -1,38 +1,21 @@
-import Base: +, -, *, ==, !=, repr, convert
+import Base: +, -, *, ==, repr, isvalid, iszero
 
-struct ECJacobian <: ECAbstract
-    a::FieldPoint
-    b::FieldPoint
-    ECJacobian(a::FieldPoint, b::FieldPoint) =
-        if a.field!=b.field throw(FieldMismatchException())
-        else new(a, b) end
-end
-
-function convert(::Type{ECJacobian}, ec::ECAbstract)
-    return ECJacobian(ec.a, ec.b)
-end
-
-function repr(ec::ECJacobian)
-    return "E: y² + xyz = x³ + "*repr(ec.a.x)*"x²z² + "*repr(ec.b.x)*"z⁶"
-end
-
-struct ECPointJacobian <: ECPointAbstract
+struct ECPointJacobian <: AbstractECPoint
     x::FieldPoint
     y::FieldPoint
     z::FieldPoint
-    isId::Bool
-    ec::ECAbstract
+    ec::EC
 
-    ECPointJacobian(x::FieldPoint, y::FieldPoint, z::FieldPoint, isId::Bool, ec::ECAbstract) =
+    ECPointJacobian(x::FieldPoint, y::FieldPoint, z::FieldPoint, ec::EC) =
         if x.field!=y.field || x.field!=z.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, z, isId, convert(ECJacobian, ec)) end
+        else new(x, y, z, ec) end
 
-    ECPointJacobian(x::FieldPoint, y::FieldPoint, z::FieldPoint, ec::ECAbstract) =
+    ECPointJacobian(x::FieldPoint, y::FieldPoint, z::FieldPoint, ec::EC) =
         if x.field!=y.field || x.field!=z.field || x.field!=ec.a.field throw(FieldMismatchException())
-        else new(x, y, z, false, convert(ECJacobian, ec)) end
+        else new(x, y, z, ec) end
 
-    ECPointJacobian(ec::ECAbstract) =
-        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), true, convert(ECJacobian, ec))
+    ECPointJacobian(ec::EC) =
+        new(FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), FieldPoint(0, ec.a.field), ec)
 end
 
 function repr(p::ECPointJacobian)
@@ -40,17 +23,13 @@ function repr(p::ECPointJacobian)
 end
 
 function ==(p1::ECPointJacobian, p2::ECPointJacobian)
-    return p1.isId==p2.isId && p1.ec==p2.ec && p1.x*p2.z^2==p2.x*p1.z^2 && p1.y*p2.z^3==p2.y*p1.z^3
-end
-
-function !=(p1::ECPointJacobian, p2::ECPointJacobian)
-    return p1.isId!=p2.isId || p1.ec!=p2.ec || p1.x*p2.z^2!=p2.x*p1.z^2 || p1.y*p2.z^3!=p2.y*p1.z^3
+    return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*p2.z^2==p2.x*p1.z^2 && p1.y*p2.z^3==p2.y*p1.z^3
 end
 
 function +(p1::ECPointJacobian, p2::ECPointJacobian)
     if p1.ec!=p2.ec throw(ECMismatchException()) end
-    if p1.isId return p2 end
-    if p2.isId return p1 end
+    if iszero(p1) return p2 end
+    if iszero(p2) return p1 end
     if p1==-p2 return ECPointJacobian(p1.ec) end
     if p1==p2 return double(p1) end
 
@@ -80,12 +59,12 @@ function +(p1::ECPointJacobian, p2::ECPointJacobian)
 end
 
 function -(p::ECPointJacobian)
-    if p.isId return p end
+    if isero(p) return p end
     return ECPointJacobian(p.x, p.x+p.y, p.z, p.ec)
 end
 
 function double(p::ECPointJacobian)
-    if p.isId return p end
+    if iszero(p) return p end
     if p==-p return ECPointJacobian(p.ec) end
 
     #Adds: 5
@@ -113,7 +92,7 @@ function double(p::ECPointJacobian)
 end
 
 function *(p::ECPointJacobian, n::Integer)
-    if p.isId return p end
+    if iszero(p) return p end
     if n==0 return ECPointJacobian(p.ec) end
     if n==1 return p end
 
@@ -129,6 +108,10 @@ function *(p::ECPointJacobian, n::Integer)
     return result
 end
 
-function is_valid(p::ECPointJacobian)
-    return p.isId || (p.y^2 + p.x*p.y*p.z == p.x^3 + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^6)
+function isvalid(p::ECPointJacobian)
+    return iszero(p) || (p.y^2 + p.x*p.y*p.z == p.x^3 + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^6)
+end
+
+function iszero(p::ECPointJacobian)
+    return iszero(p.z)
 end
