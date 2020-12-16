@@ -4,20 +4,17 @@ struct ECMismatchException <: Exception end
 
 abstract type AbstractECPoint end
 
-struct EC
-    a::FieldPoint
-    b::FieldPoint
-    EC(a::FieldPoint, b::FieldPoint) =
-        if a.field!=b.field throw(FieldMismatchException())
-        else new(a, b) end
+struct EC{D,R}
+    a::FieldPoint{D,R}
+    b::FieldPoint{D,R}
 end
 
 function repr(ec::EC)
-    return "E: y² + xy = x³ + "*repr(ec.a.x)*"x² + "*repr(ec.b.x)
+    return "E: y² + xy = x³ + "*repr(ec.a.value)*"x² + "*repr(ec.b.value)
 end
 
 function ==(ec1::EC, ec2::EC)
-    return ec1.a==ec2.a && ec1.b==ec2.b && ec1.a.field==ec2.a.field
+    return ec1.a==ec2.a && ec1.b==ec2.b
 end
 
 function -(p1::AbstractECPoint, p2::AbstractECPoint)
