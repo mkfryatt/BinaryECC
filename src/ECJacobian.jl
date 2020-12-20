@@ -6,10 +6,10 @@ struct ECPointJacobian{D,R} <: AbstractECPoint
     z::FieldPoint{D,R}
     ec::EC{D,R}
 
-    ECPointJacobian{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where D where R =
+    ECPointJacobian{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
         new(x, y, z, ec)
 
-    ECPointJacobian{D,R}(ec::EC{D,R}) where D where R =
+    ECPointJacobian{D,R}(ec::EC{D,R}) where {D,R} =
         new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
@@ -17,13 +17,13 @@ function repr(p::ECPointJacobian)
     return "("*repr(p.x)*", "*repr(p.y)*", "*repr(p.z)*")"
 end
 
-function ==(p1::ECPointJacobian{D,R}, p2::ECPointJacobian{D,R}) where D where R
+function ==(p1::ECPointJacobian{D,R}, p2::ECPointJacobian{D,R}) where {D,R}
     z1_2 = p1.z^2
     z2_2 = p2.z^2
     return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*z2_2==p2.x*z1_2 && p1.y*p2.z*z2_2==p2.y*p1.z*z1_2
 end
 
-function +(p1::ECPointJacobian{D,R}, p2::ECPointJacobian{D,R}) where D where R
+function +(p1::ECPointJacobian{D,R}, p2::ECPointJacobian{D,R}) where {D,R}
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
@@ -54,12 +54,12 @@ function +(p1::ECPointJacobian{D,R}, p2::ECPointJacobian{D,R}) where D where R
     return ECPointJacobian{D,R}(x3, y3, z3, p1.ec)
 end
 
-function -(p::ECPointJacobian{D,R}) where D where R
+function -(p::ECPointJacobian{D,R}) where {D,R}
     if isero(p) return p end
     return ECPointJacobian{D,R}(p.x, p.x+p.y, p.z, p.ec)
 end
 
-function double(p::ECPointJacobian{D,R}) where D where R
+function double(p::ECPointJacobian{D,R}) where {D,R}
     if iszero(p) return p end
     if p==-p return ECPointJacobian{D,R}(p.ec) end
 
@@ -86,7 +86,7 @@ function double(p::ECPointJacobian{D,R}) where D where R
     return ECPointJacobian{D,R}(x_new, y_new, z_new, p.ec)
 end
 
-function *(p::ECPointJacobian{D,R}, n::Integer) where D where R
+function *(p::ECPointJacobian{D,R}, n::Integer) where {D,R}
     if iszero(p) return p end
     if n==0 return ECPointJacobian{D,R}(p.ec) end
     if n==1 return p end

@@ -5,18 +5,18 @@ using Base: log2, floor, rand, ceil
 #R is the reduction polynomial without the x^D term
 struct FieldPoint{D,R}
     value::BigInt
-    FieldPoint{D,R}(value::Integer) where D where R = new(convert(BigInt, value))
+    FieldPoint{D,R}(value::Integer) where {D,R} = new(convert(BigInt, value))
 end
 
 #sec1v2 2.3.6
-function FieldPoint{D,R}(s::String) where D where R
+function FieldPoint{D,R}(s::String) where {D,R}
     s = replace(s, " " => "")
     if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
     value = parse(BigInt, s, base=16)
     return FieldPoint{D,R}(value)
 end
 
-function repr(a::FieldPoint{D,R}) where D where R
+function repr(a::FieldPoint{D,R}) where {D,R}
     acc = ""
     i = 0
     val = a.value
@@ -36,33 +36,31 @@ function repr(a::FieldPoint{D,R}) where D where R
     return acc
 end
 
-function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where D where R
+function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a.value==b.value
 end
 
-function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where D where R
+function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return FieldPoint{D,R}(a.value ⊻ b.value)
 end
 
-function -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where D where R
+function -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a+b
 end
 
-function -(a::FieldPoint{D,R}) where D where R
+function -(a::FieldPoint{D,R}) where {D,R}
     return a
 end
 
-function reduce(a::FieldPoint{D,R}) where D where R
+function reduce(a::FieldPoint{D,R}) where {D,R}
     if a.value<(BigInt(1)<<D) return a end
 
     #k = order(a) - a.field.order
     #i.e. k is the number of bits of a that need to be reduced
     k = bits(a.value) - D
 
-    #reduction(x) = x^order + t(x)
-    #ie get rid of the largest bit in the reduction polynomial
-    t = R ⊻ (BigInt(1) << D)
-    #now shift t left, and the loop will slowly shift it back down again
+    t = BigInt(R)
+    #shift t left, and the loop will slowly shift it back down again
     t <<= k
 
     result = a.value
@@ -78,8 +76,7 @@ function reduce(a::FieldPoint{D,R}) where D where R
 end
 
 #right to left, shift and add
-function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where D where R
-
+function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     if a.value & BigInt(1) != BigInt(0)
         c = b.value
     else
@@ -98,14 +95,23 @@ end
 
 #number of bits in the binary representation of this number
 function bits(a::Integer)
-    return floor(Int, log2(a)) +1
+    i = 0
+    while a > (BigInt(1)<<i)
+        i += 1
+    end
+    if a == (BigInt(1)<<i)
+        return i+1
+    else
+        return i
+    end
+    #return floor(Int, log2(a)) +1 #log is an approximation
 end
 
-function inv(a::FieldPoint{D,R}) where D where R
+function inv(a::FieldPoint{D,R}) where {D,R}
     if a.value==0 throw(DivideError()) end
 
     u = a.value
-    v = R
+    v = BigInt(R) + (BigInt(1)<<D)
     g1 = BigInt(1)
     g2 = BigInt(0)
 
@@ -122,26 +128,12 @@ function inv(a::FieldPoint{D,R}) where D where R
     return reduce(FieldPoint{D,R}(g1)) #TODO is this reduce needed?
 end
 
-function /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where D where R
+function /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a * inv(b)
 end
 
-#add a zero between every digit of the original
-function square(a::FieldPoint{D,R}) where D where R
-    result = BigInt(0)
-    counter = BigInt(1)
-    for i in 0:(D-1)
-        if a.value & counter != BigInt(0)
-            result += BigInt(1) << (i*2)
-        end
-        counter <<= 1
-    end
-
-    return reduce(FieldPoint{D,R}(result))
-end
-
 #square and multiply method
-function ^(a::FieldPoint{D,R}, b::Integer) where D where R
+function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
     result = FieldPoint{D,R}(1)
     squaring = a
 
@@ -149,20 +141,20 @@ function ^(a::FieldPoint{D,R}, b::Integer) where D where R
         if b & BigInt(1) == BigInt(1)
             result *= squaring
         end
-        squaring = square(squaring)
+        squaring *= squaring
         b >>>= 1
     end
 
-    return reduce(result) #TODO is this reduce needed?
+    return result
 end
 
-function sqrt(a::FieldPoint{D,R}) where D where R
+function sqrt(a::FieldPoint{D,R}) where {D,R}
     return a^(BigInt(1)<<(D-1))
 end
 
-function random(degree::Int16, reduction::Int128)
-    range = BigInt(0):((BigInt(1)<<degree)-BigInt(1))
-    return FieldPoint{degree,reduction}(rand(range))
+function random(::Type{FieldPoint{D,R}}) where {D,R}
+    range = BigInt(0):((BigInt(1)<<D)-BigInt(1))
+    return FieldPoint{D,R}(rand(range))
 end
 
 function iszero(a::FieldPoint)

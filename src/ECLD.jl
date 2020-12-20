@@ -6,10 +6,10 @@ struct ECPointLD{D,R} <: AbstractECPoint
     z::FieldPoint{D,R}
     ec::EC{D,R}
 
-    ECPointLD{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where D where R =
+    ECPointLD{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
         new(x, y, z, ec)
 
-    ECPointLD{D,R}(ec::EC{D,R}) where D where R =
+    ECPointLD{D,R}(ec::EC{D,R}) where {D,R} =
         new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
@@ -17,11 +17,11 @@ function repr(p::ECPointLD)
     return "("*repr(p.x)*", "*repr(p.y)*", "*repr(p.z)*")"
 end
 
-function ==(p1::ECPointLD{D,R}, p2::ECPointLD{D,R}) where D where R
+function ==(p1::ECPointLD{D,R}, p2::ECPointLD{D,R}) where {D,R}
     return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*p2.z==p2.x*p1.z && p1.y*p2.z^2==p2.y*p1.z^2
 end
 
-function +(p1::ECPointLD{D,R}, p2::ECPointLD{D,R}) where D where R
+function +(p1::ECPointLD{D,R}, p2::ECPointLD{D,R}) where {D,R}
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
@@ -50,12 +50,12 @@ function +(p1::ECPointLD{D,R}, p2::ECPointLD{D,R}) where D where R
     return ECPointLD{D,R}(x3, y3, z3, p1.ec)
 end
 
-function -(p::ECPointLD{D,R}) where D where R
+function -(p::ECPointLD{D,R}) where {D,R}
     if iszero(p) return p end
     return ECPointLD{D,R}(p.x, p.x+p.y, p.z, p.ec)
 end
 
-function double(p::ECPointLD{D,R}) where D where R
+function double(p::ECPointLD{D,R}) where {D,R}
     if iszero(p) return p end
     if p==-p return ECPointLD{D,R}(p.ec) end
 
@@ -79,7 +79,7 @@ function double(p::ECPointLD{D,R}) where D where R
     return ECPointLD{D,R}(x_new, y_new, z_new, p.ec)
 end
 
-function *(p::ECPointLD{D,R}, n::Integer) where D where R
+function *(p::ECPointLD{D,R}, n::Integer) where {D,R}
     if iszero(p) return p end
     if n==0 return ECPointLD{D,R}(p.ec) end
     if n==1 return p end
