@@ -27,3 +27,19 @@ end
 function *(n::Integer, p::AbstractECPoint)
     return p*n
 end
+
+#scalar multiplication
+#performs a fixed sequence of curve and field ops
+function montpow(p::AbstractECPoint, n::Integer)
+    R0 = p
+    R1 = double(p)
+    for i in (bits(n)-2):-1:0
+        bit = (n>>>i)&1
+        if bit==0
+            R1, R0 = R0+R1, double(R0)
+        else
+            R0, R1 = R0+R1, double(R1)
+        end
+    end
+    return R0
+end

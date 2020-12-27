@@ -36,8 +36,8 @@ function ECPointAffine(s::String, ec::EC)
 
     #TODO handle compressed format
 
-    x = FieldPoint(s[3:4+2*floor(Int16, ec.a.field.order / 8)], ec.a.field)
-    y = FieldPoint(s[5+2*floor(Int16, ec.a.field.order / 8):6+4*floor(Int16, ec.a.field.order / 8)], ec.a.field)
+    x = FieldPoint(s[3:4+2*(ec.a.field.order÷8)], ec.a.field)
+    y = FieldPoint(s[5+2*(ec.a.field.order÷8):6+4*(ec.a.field.order÷8)], ec.a.field)
 
     return ECPointAffine(x, y, ec)
 end
@@ -110,4 +110,18 @@ end
 
 function iszero(p::ECPointAffine)
     return p.isId
+end
+
+function montpow(p::ECPointAffine, n::Integer)
+    R0 = p
+    R1 = double(p)
+    for i in (bits(n)-2):-1:0
+        bit = (n>>>i)&1
+        if bit==0
+            R1, R0 = R0+R1, double(R0)
+        else
+            R0, R1 = R0+R1, double(R1)
+        end
+    end
+    return R0
 end

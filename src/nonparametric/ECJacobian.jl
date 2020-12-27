@@ -59,7 +59,7 @@ function +(p1::ECPointJacobian, p2::ECPointJacobian)
 end
 
 function -(p::ECPointJacobian)
-    if isero(p) return p end
+    if iszero(p) return p end
     return ECPointJacobian(p.x, p.x+p.y, p.z, p.ec)
 end
 
@@ -86,7 +86,7 @@ function double(p::ECPointJacobian)
     x_new *= z_4^2
 
     y_new = B * (p.x*z_new)^2
-    y_new += (A+B)*x_new*z4
+    y_new += (A+B)*x_new*z_4
 
     return ECPointJacobian(x_new, y_new, z_new, p.ec)
 end

@@ -5,7 +5,7 @@ struct FieldMismatchException <: Exception end
 
 struct Field
     order::Int16 #the degree of the polynomial
-    reduction::BigInt #the reduction polynomial without the most significant bit
+    reduction::BigInt #the reduction polynomial
     Field(m::Integer, f::Integer) = new(convert(Int16, m), convert(BigInt, f))
 end
 
@@ -18,9 +18,11 @@ function ==(a::Field, b::Field)
 end
 
 struct FieldPoint
-    value::BigInt
+    x::BigInt
     field::Field
-    FieldPoint(value::Integer, field::Field) = new(convert(BigInt, value), field)
+    FieldPoint(x::Integer, m::Integer, f::Integer) =
+        FieldPoint(convert(BigInt, x), Field(m, f))
+    FieldPoint(x::Integer, field::Field) = new(convert(BigInt, x), field)
 end
 
 #sec1v2 2.3.6
@@ -34,7 +36,7 @@ end
 function repr(a::FieldPoint)
     acc = ""
     i = 0
-    val = a.value
+    val = a.x
     while val > 0
         if val & BigInt(1) > BigInt(0)
             if i==0
@@ -52,12 +54,12 @@ function repr(a::FieldPoint)
 end
 
 function ==(a::FieldPoint, b::FieldPoint)
-    return a.value==b.value && a.field==b.field
+    return a.x==b.x && a.field==b.field
 end
 
 function +(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
-    return FieldPoint(a.value ⊻ b.value, a.field)
+    return FieldPoint(a.x ⊻ b.x, a.field)
 end
 
 function -(a::FieldPoint, b::FieldPoint)
@@ -69,17 +71,19 @@ function -(a::FieldPoint)
 end
 
 function reduce(a::FieldPoint)
-    if a.value<(BigInt(1)<<a.field.order) return a end
+    if a.x<(BigInt(1)<<a.field.order) return a end
 
     #k = order(a) - a.field.order
     #i.e. k is the number of bits of a that need to be reduced
-    k = bits(a.value) - a.field.order
+    k = bits(a.x) - a.field.order
 
     #reduction(x) = x^order + t(x)
+    #ie get rid of the largest bit in the reduction polynomial
+    t = a.field.reduction ⊻ (BigInt(1) << a.field.order)
     #now shift t left, and the loop will slowly shift it back down again
-    t = a.field.reduction << k
+    t <<= k
 
-    result = a.value
+    result = a.x
 
     for i in k:-1:0
         if result & (BigInt(1) << (a.field.order+i)) != BigInt(0)
@@ -95,16 +99,16 @@ end
 function *(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
 
-    if a.value & BigInt(1) != BigInt(0)
-        c = b.value
+    if a.x & BigInt(1) != BigInt(0)
+        c = b.x
     else
         c = BigInt(0)
     end
 
     for i in 1:(a.field.order-1)
-        if a.value & (BigInt(1)<<i) != BigInt(0)
-            temp = reduce(FieldPoint(b.value << i, b.field))
-            c ⊻= temp.value
+        if a.x & (BigInt(1)<<i) != BigInt(0)
+            temp = reduce(FieldPoint(b.x << i, b.field))
+            c ⊻= temp.x
         end
     end
 
@@ -113,23 +117,14 @@ end
 
 #number of bits in the binary representation of this number
 function bits(a::Integer)
-    i = 0
-    while a > (BigInt(1)<<i)
-        i += 1
-    end
-    if a == (BigInt(1)<<i)
-        return i+1
-    else
-        return i
-    end
-    #return floor(Int, log2(a)) +1 #log is an approximation
+    return floor(Int, log2(a)) +1
 end
 
 function inv(a::FieldPoint)
-    if a.value==0 throw(DivideError()) end
+    if a.x==0 throw(DivideError()) end
 
-    u = a.value
-    v = a.field.reduction + (BigInt(1)<<a.field.order)
+    u = a.x
+    v = a.field.reduction
     g1 = BigInt(1)
     g2 = BigInt(0)
 
@@ -151,6 +146,21 @@ function /(a::FieldPoint, b::FieldPoint)
     return a * inv(b)
 end
 
+#add a zero between every digit of the original
+function square(a::FieldPoint)
+    a = reduce(a)
+    result = BigInt(0)
+    counter = BigInt(1)
+    for i in 0:(a.field.order-1)
+        if a.x & counter != BigInt(0)
+            result += BigInt(1) << (i*2)
+        end
+        counter <<= 1
+    end
+
+    return reduce(FieldPoint(result, a.field))
+end
+
 #square and multiply method
 function ^(a::FieldPoint, b::Integer)
     a = reduce(a)
@@ -162,7 +172,7 @@ function ^(a::FieldPoint, b::Integer)
         if b & BigInt(1) == BigInt(1)
             result *= squaring
         end
-        squaring *= squaring
+        squaring = square(squaring)
         b >>>= 1
     end
 
@@ -179,14 +189,14 @@ function random(f::Field)
 end
 
 function iszero(a::FieldPoint)
-    return a.value==0
+    return a.x==0
 end
 
 #sec2 v2, table 3:
-const FIELD163 = Field(163, BigInt(128+64+8+1))
-const FIELD233 = Field(233, (BigInt(1)<<74) + BigInt(1))
-const FIELD239A = Field(239,  (BigInt(1)<<36) + BigInt(1))
-const FIELD239B = Field(239, (BigInt(1)<<158) + BigInt(1))
-const FIELD283 = Field(283, (BigInt(1)<<12) + BigInt(128+32+1))
-const FIELD409 = Field(409, (BigInt(1)<<87) + BigInt(1))
-const FIELD571 = Field(571, (BigInt(1)<<10) + BigInt(32+4+1))
+const FIELD163 = Field(163, (BigInt(1)<<163) + BigInt(128+64+8+1))
+const FIELD233 = Field(233, (BigInt(1)<<233) + (BigInt(1)<<74) + BigInt(1))
+const FIELD239A = Field(239, (BigInt(1)<<239) + (BigInt(1)<<36) + BigInt(1))
+const FIELD239B = Field(239, (BigInt(1)<<239) + (BigInt(1)<<158) + BigInt(1))
+const FIELD283 = Field(283, (BigInt(1)<<283) + (BigInt(1)<<12) + BigInt(128+32+1))
+const FIELD409 = Field(409, (BigInt(1)<<409) + (BigInt(1)<<87) + BigInt(1))
+const FIELD571 = Field(571, (BigInt(1)<<571) + (BigInt(1)<<10) + BigInt(32+4+1))
