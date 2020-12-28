@@ -1,7 +1,6 @@
 import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero
-using Base: log2, floor, rand, ceil
 
-#D is the degree of the field
+#D is the degree of the reduction polynomial
 #R is the reduction polynomial without the x^D term
 struct FieldPoint{D,R}
     value::BigInt
@@ -9,6 +8,7 @@ struct FieldPoint{D,R}
 end
 
 #sec1v2 2.3.6
+#convert a hex string to a field element
 function FieldPoint{D,R}(s::String) where {D,R}
     s = replace(s, " " => "")
     if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
@@ -16,24 +16,8 @@ function FieldPoint{D,R}(s::String) where {D,R}
     return FieldPoint{D,R}(value)
 end
 
-function repr(a::FieldPoint{D,R}) where {D,R}
-    acc = ""
-    i = 0
-    val = a.value
-    while val > 0
-        if val & BigInt(1) > BigInt(0)
-            if i==0
-                acc = "1"
-            elseif acc==""
-                acc = "x^"*repr(i)
-            else
-                acc = "x^"*repr(i)*" + "*acc
-            end
-        end
-        i += 1
-        val >>>= BigInt(1)
-    end
-    return acc
+function repr(a::FieldPoint)
+    return repr(a.value)
 end
 
 function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
@@ -55,45 +39,58 @@ end
 function reduce(a::FieldPoint{D,R}) where {D,R}
     if a.value<(BigInt(1)<<D) return a end
 
-    #k = order(a) - a.field.order
-    #i.e. k is the number of bits of a that need to be reduced
+    #k is the number of bits of a that need to be removed from a
     k = bits(a.value) - D
 
-    t = BigInt(R)
-    #shift t left, and the loop will slowly shift it back down again
-    t <<= k
+    #shift the reduction polynomial left
+    #the loop will slowly shift it back down again
+    t = BigInt(R) << k
 
-    result = a.value
+    #b will eventually be such that a ≡ b (mod R)
+    b = a.value
 
-    for i in k:-1:0
-        if result & (BigInt(1) << (D+i)) != BigInt(0)
-            result ⊻= t + (BigInt(1)<<(D+i))
+    for i in (k+D):-1:D
+        if b & (BigInt(1) << i) != BigInt(0)
+            b ⊻= t + (BigInt(1)<<i)
         end
         t >>>= 1
     end
 
-    return FieldPoint{D,R}(result)
+    return FieldPoint{D,R}(b)
 end
 
 #right to left, shift and add
 function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
-    if a.value & BigInt(1) != BigInt(0)
-        c = b.value
-    else
-        c = BigInt(0)
-    end
+    if a.value==b.value return square(a) end
 
-    for i in 1:(D-1)
+    c = BigInt(0)
+    shiftedb = b.value
+
+    for i in 0:(D-1)
         if a.value & (BigInt(1)<<i) != BigInt(0)
-            temp = reduce(FieldPoint{D,R}(b.value << i))
-            c ⊻= temp.value
+            c ⊻= shiftedb
         end
+        shiftedb <<= 1
     end
 
     return reduce(FieldPoint{D,R}(c))
 end
 
-#number of bits in the binary representation of this number
+#add a zero between every digit of the original
+function square(a::FieldPoint{D,R}) where {D,R}
+    b = BigInt(0)
+    counter = BigInt(1)
+    for i in 0:(D-1)
+        if a.value & counter != BigInt(0)
+            b += BigInt(1) << (i*2)
+        end
+        counter <<= 1
+    end
+
+    return reduce(FieldPoint{D,R}(b))
+end
+
+#length of a number in bits
 function bits(a::Integer)
     i = 0
     while a > (BigInt(1)<<i)
@@ -105,8 +102,11 @@ function bits(a::Integer)
         return i
     end
     #return floor(Int, log2(a)) +1 #log is an approximation
+    #TODO find a constant time method for this?
 end
 
+#uses a version of egcd to invert a
+#Algorithm 2.48, Guide to Elliptic Curve Cryptography
 function inv(a::FieldPoint{D,R}) where {D,R}
     if a.value==0 throw(DivideError()) end
 
@@ -125,27 +125,27 @@ function inv(a::FieldPoint{D,R}) where {D,R}
         u ⊻= v << j
         g1 ⊻= g2 << j
     end
-    return reduce(FieldPoint{D,R}(g1)) #TODO is this reduce needed?
+    return reduce(FieldPoint{D,R}(g1))
 end
 
 function /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a * inv(b)
 end
 
-#square and multiply method
+#right to left, square and multiply method
 function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
-    result = FieldPoint{D,R}(1)
+    c = FieldPoint{D,R}(1)
     squaring = a
 
     while b>BigInt(0)
         if b & BigInt(1) == BigInt(1)
-            result *= squaring
+            c *= squaring
         end
         squaring *= squaring
         b >>>= 1
     end
 
-    return result
+    return c
 end
 
 function sqrt(a::FieldPoint{D,R}) where {D,R}

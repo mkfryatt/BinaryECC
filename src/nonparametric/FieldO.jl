@@ -1,5 +1,4 @@
 import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero
-using Base: log2, floor, rand, ceil
 
 struct FieldMismatchException <: Exception end
 
@@ -7,10 +6,6 @@ struct Field
     order::Int16 #the degree of the polynomial
     reduction::BigInt #the reduction polynomial
     Field(m::Integer, f::Integer) = new(convert(Int16, m), convert(BigInt, f))
-end
-
-function repr(f::Field)
-    return "Degree: "*repr(f.order)*"\nReduction: "*repr(f.reduction)
 end
 
 function ==(a::Field, b::Field)
@@ -24,6 +19,7 @@ struct FieldPoint
 end
 
 #sec1v2 2.3.6
+#convert a hex string to a field element
 function FieldPoint(s::String, f::Field)
     s = replace(s, " " => "")
     if length(s)!=ceil(f.order / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
@@ -32,23 +28,7 @@ function FieldPoint(s::String, f::Field)
 end
 
 function repr(a::FieldPoint)
-    acc = ""
-    i = 0
-    val = a.value
-    while val > 0
-        if val & BigInt(1) > BigInt(0)
-            if i==0
-                acc = "1"
-            elseif acc==""
-                acc = "x^"*repr(i)
-            else
-                acc = "x^"*repr(i)*" + "*acc
-            end
-        end
-        i += 1
-        val >>>= BigInt(1)
-    end
-    return acc
+    return repr(a)
 end
 
 function ==(a::FieldPoint, b::FieldPoint)
@@ -71,25 +51,25 @@ end
 function reduce(a::FieldPoint)
     if a.value<(BigInt(1)<<a.field.order) return a end
 
-    #k = order(a) - a.field.order
-    #i.e. k is the number of bits of a that need to be reduced
+    #k is the number of bits of a that need to be removed from a
     k = bits(a.value) - a.field.order
 
-    #reduction(x) = x^order + t(x)
-    #ie get rid of the largest bit in the reduction polynomial
-    #now shift t left, and the loop will slowly shift it back down again
+    #shift the reduction polynomial left
+    #the loop will slowly shift it back down again
     t = a.field.reduction << k
 
-    result = a.value
+    #b will eventually be such that a ≡ b (mod reduction polynomial)
+    b = a.value
 
-    for i in k:-1:0
-        if result & (BigInt(1) << (a.field.order+i)) != BigInt(0)
-            result ⊻= t + (BigInt(1)<<(a.field.order+i))
+    #left to right, get rid of the extra bits of b
+    for i in (k+D):-1:D
+        if b & (BigInt(1)<<i) != BigInt(0)
+            b ⊻= t + (BigInt(1)<<i)
         end
         t >>>= 1
     end
 
-    return FieldPoint(result, a.field)
+    return FieldPoint(b, a.field)
 end
 
 #right to left, shift and add
@@ -97,17 +77,14 @@ function *(a::FieldPoint, b::FieldPoint)
     if a.field!=b.field throw(FieldMismatchException()) end
     if a.value==b.value return square(a) end
 
-    if a.value & BigInt(1) != BigInt(0)
-        c = b.value
-    else
-        c = BigInt(0)
-    end
+    c = BigInt(0)
+    shiftedb = b.value
 
-    for i in 1:(a.field.order-1)
+    for i in 0:(a.field.order-1)
         if a.value & (BigInt(1)<<i) != BigInt(0)
-            temp = reduce(FieldPoint(b.value << i, b.field))
-            c ⊻= temp.value
+            c ⊻= shiftedb
         end
+        shiftedb <<= 1
     end
 
     return reduce(FieldPoint(c, a.field))
@@ -115,9 +92,21 @@ end
 
 #number of bits in the binary representation of this number
 function bits(a::Integer)
-    return floor(Int, log2(a)) +1
+    i = 0
+    while a > (BigInt(1)<<i)
+        i += 1
+    end
+    if a == (BigInt(1)<<i)
+        return i+1
+    else
+        return i
+    end
+    #return floor(Int, log2(a)) +1 #log is an approximation
+    #TODO find a constant time method for this?
 end
 
+#uses a version of egcd to invert a
+#Algorithm 2.48, Guide to Elliptic Curve Cryptography
 function inv(a::FieldPoint)
     if a.value==0 throw(DivideError()) end
 
@@ -146,11 +135,11 @@ end
 
 #add a zero between every digit of the original
 function square(a::FieldPoint)
-    result = BigInt(0)
+    b = BigInt(0)
     counter = BigInt(1)
     for i in 0:(a.field.order-1)
         if a.value & counter != BigInt(0)
-            result += BigInt(1) << (i*2)
+            b += BigInt(1) << (i*2)
         end
         counter <<= 1
     end
@@ -158,26 +147,27 @@ function square(a::FieldPoint)
     return reduce(FieldPoint(result, a.field))
 end
 
-#square and multiply method
+#right to left, square and multiply method
 function ^(a::FieldPoint, b::Integer)
-    result = FieldPoint(1, a.field)
+    c = FieldPoint(1, a.field)
     squaring = a
 
     while b>BigInt(0)
         if b & BigInt(1) == BigInt(1)
-            result *= squaring
+            c *= squaring
         end
         squaring = square(squaring)
         b >>>= 1
     end
 
-    return result
+    return c
 end
 
 function sqrt(a::FieldPoint)
     return a^(BigInt(1)<<(a.field.order-1))
 end
 
+#return a random element of the specified field
 function random(f::Field)
     range = BigInt(0):((BigInt(1)<<f.order)-BigInt(1))
     return FieldPoint(rand(range), f)
