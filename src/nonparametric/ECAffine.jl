@@ -27,7 +27,7 @@ function ECPointAffine(s::String, ec::EC)
     if s=="00" return ECPointAffine(ec) end
 
     #input string is not of the uncompressed format specified by sec1v2
-    if length(s) != 4*ceil(Int16, ec.a.field.order / 8)+2
+    if length(s) != 4*ceil(Int16, ec.a.field.degree / 8)+2
         throw(ArgumentError("Octet string is of the wrong length for this curve."))
     end
     if s[1:2]!="04"
@@ -36,8 +36,8 @@ function ECPointAffine(s::String, ec::EC)
 
     #TODO handle compressed format
 
-    x = FieldPoint(s[3:4+2*(ec.a.field.order÷8)], ec.a.field)
-    y = FieldPoint(s[5+2*(ec.a.field.order÷8):6+4*(ec.a.field.order÷8)], ec.a.field)
+    x = FieldPoint(s[3:4+2*(ec.a.field.degree÷8)], ec.a.field)
+    y = FieldPoint(s[5+2*(ec.a.field.degree÷8):6+4*(ec.a.field.degree÷8)], ec.a.field)
 
     return ECPointAffine(x, y, ec)
 end

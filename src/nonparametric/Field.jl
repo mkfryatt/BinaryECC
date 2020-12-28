@@ -3,13 +3,13 @@ import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero
 struct FieldMismatchException <: Exception end
 
 struct Field
-    order::Int16 #the degree of the polynomial
+    degree::Int16 #the degree of the reduction polynomial
     reduction::BigInt #the reduction polynomial
-    Field(m::Integer, f::Integer) = new(convert(Int16, m), convert(BigInt, f))
+    Field(d::Integer, r::Integer) = new(convert(Int16, d), convert(BigInt, r))
 end
 
 function ==(a::Field, b::Field)
-    return a.order==b.order && a.reduction==b.reduction
+    return a.degree==b.degree && a.reduction==b.reduction
 end
 
 struct FieldPoint
@@ -22,7 +22,7 @@ end
 #convert a hex string to a field element
 function FieldPoint(s::String, f::Field)
     s = replace(s, " " => "")
-    if length(s)!=ceil(f.order / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
+    if length(s)!=ceil(f.degree / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
     value = parse(BigInt, s, base=16)
     return FieldPoint(value, f)
 end
@@ -49,10 +49,10 @@ function -(a::FieldPoint)
 end
 
 function reduce(a::FieldPoint)
-    if a.value<(BigInt(1)<<a.field.order) return a end
+    if a.value<(BigInt(1)<<a.field.degree) return a end
 
     #k is the number of bits of a that need to be removed from a
-    k = bits(a.value) - a.field.order
+    k = bits(a.value) - a.field.degree
 
     #shift the reduction polynomial left
     #the loop will slowly shift it back down again
@@ -80,7 +80,7 @@ function *(a::FieldPoint, b::FieldPoint)
     c = BigInt(0)
     shiftedb = b.value
 
-    for i in 0:(a.field.order-1)
+    for i in 0:(a.field.degree-1)
         if a.value & (BigInt(1)<<i) != BigInt(0)
             c ⊻= shiftedb
         end
@@ -111,7 +111,7 @@ function inv(a::FieldPoint)
     if a.value==0 throw(DivideError()) end
 
     u = a.value
-    v = a.field.reduction + (BigInt(1)<<a.field.order)
+    v = a.field.reduction + (BigInt(1)<<a.field.degree)
     g1 = BigInt(1)
     g2 = BigInt(0)
 
@@ -137,7 +137,7 @@ end
 function square(a::FieldPoint)
     b = BigInt(0)
     counter = BigInt(1)
-    for i in 0:(a.field.order-1)
+    for i in 0:(a.field.degree-1)
         if a.value & counter != BigInt(0)
             b += BigInt(1) << (i*2)
         end
@@ -164,12 +164,12 @@ function ^(a::FieldPoint, b::Integer)
 end
 
 function sqrt(a::FieldPoint)
-    return a^(BigInt(1)<<(a.field.order-1))
+    return a^(BigInt(1)<<(a.field.degree-1))
 end
 
 #return a random element of the specified field
 function random(f::Field)
-    range = BigInt(0):((BigInt(1)<<f.order)-BigInt(1))
+    range = BigInt(0):((BigInt(1)<<f.degree)-BigInt(1))
     return FieldPoint(rand(range), f)
 end
 
