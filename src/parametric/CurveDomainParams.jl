@@ -1,13 +1,80 @@
-struct CurveDomainParams
-    G::ECPointAffine #generator point
+import Base: isvalid
+
+#T is the tuple of curve domain params
+#Defined by sec1v2, 3.1.2
+#T = (m, f(x), a, b, G, n, h)
+#m: D
+#f(x): R + x^m
+#a: G.ec.a
+#b: G.ec.b
+#G: G
+#n: n
+#h: h
+
+struct CurveDomainParams{D,R}
+    G::ECPointAffine{D,R} #generator point
     n::BigInt #order of G, ie nG = O
     h::BigInt #cofactor
-    CurveDomainParams(G::ECPointAffine, n::Number, h::Number) =
-        new(G, convert(BigInt, n), convert(BigInt, h))
+    CurveDomainParams(G::ECPointAffine{D,R}, n::Number, h::Number) where {D,R} =
+        new{D,R}(G, convert(BigInt, n), convert(BigInt, h))
 end
 
-#sec2 v2 curve domain parameters:
+#sec1 v2, 3.1.2.2.1
+#Elliptic Curve Domain Parameters over F_{2^m} Validation Primitive
+function isvalid(T::CurveDomainParams{D,R}, t::Int) where {D,R}
+    #1
+    levels = [80, 112, 128, 192, 256]
+    i=1
+    while levels[i]<t
+        i+=1
+        if i>5 return false end #t has been set too high
+    end
+    tprime = levels[i]
 
+    if !(D in [163, 233, 239, 283, 409, 571]) return false end
+    if D<=2*t || D>=2*tprime return false end
+
+    #2
+    reductions = Dict([
+        (163, Int128(128+64+8+1)),
+        (233, (Int128(1)<<74) + Int128(1)),
+        (239, Int128(1)<<36) + Int128(1)),
+        (483, (Int128(1)<<12) + Int128(128+32+1)),
+        (409, (Int128(1)<<87) + Int128(1)),
+        (571, (Int128(1)<<10) + Int128(32+4+1))
+    ])
+    if R!=reductions[D] return false end
+
+    #3
+    #check that a,b,x,y are all in the field
+    #this should already be true due to checks in the constructor for G
+
+    #4
+    if iszero(T.G.ec.b) return false end
+
+    #5
+    if !isvalid(T.G) return false end
+
+    #6
+    #TODO Check that n is prime
+
+    #7
+    if T.h> 2^(t/8) return false end
+    if T.h != floor(Int, ((sqrt(2^D)+1)^2/T.n)) return false end
+
+    #8
+    if !iszero(T.n*T.G) return false end
+
+    #9
+    if T.n*T.h == 2^m return false end
+    for B in 1:(200*D)
+        if (2^B % T.n)==0 return false end
+    end
+
+    return true
+end
+
+#sec2 v2 curve parameters:
 const SECT163K1 = CurveDomainParams(
     ECPointAffine(
         "0402FE 13C0537B BC11ACAA 07D793DE 4E6D5E5C 94EEE802 89070FB0 5D38FF58 321F2E80 0536D538 CCDAA3D9",

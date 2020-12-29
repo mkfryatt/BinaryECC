@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero
+import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, convert
 
 #D is the degree of the reduction polynomial
 #R is the reduction polynomial without the x^D term
@@ -101,8 +101,6 @@ function bits(a::Integer)
     else
         return i
     end
-    #return floor(Int, log2(a)) +1 #log is an approximation
-    #TODO find a constant time method for this?
 end
 
 #uses a version of egcd to invert a
@@ -161,8 +159,16 @@ function iszero(a::FieldPoint)
     return a.value==0
 end
 
-#sec2 v2, table 3:
+#sec1 v2, 2.3.9
+function convert(::Type{BigInt}, a::FieldPoint)
+    return a.value
+end
+
+#sec2 v2 (and v1), table 3:
+FieldPoint113 = FieldPoint{113, Int128(512+1)} #v1 only
+FieldPoint131 = FieldPoint{131, Int128(256+8+4+1)} #v1 only
 FieldPoint163 = FieldPoint{163, Int128(128+64+8+1)}
+FieldPoint193 = FieldPoint{193, (Int128(1)<<15) + Int128(1)} #v1 only
 FieldPoint233 = FieldPoint{233, (Int128(1)<<74) + Int128(1)}
 FieldPoint239 = FieldPoint{239, (Int128(1)<<36) + Int128(1)}
 FieldPoint283 = FieldPoint{283, (Int128(1)<<12) + Int128(128+32+1)}

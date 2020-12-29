@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero
+import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, convert
 
 struct FieldMismatchException <: Exception end
 
@@ -15,7 +15,7 @@ end
 struct FieldPoint
     value::BigInt
     field::Field
-    FieldPoint(x::Integer, field::Field) = new(convert(BigInt, x), field)
+    FieldPoint(x::Integer, field::Field) = reduce(new(convert(BigInt, x), field))
 end
 
 #sec1v2 2.3.6
@@ -101,8 +101,6 @@ function bits(a::Integer)
     else
         return i
     end
-    #return floor(Int, log2(a)) +1 #log is an approximation
-    #TODO find a constant time method for this?
 end
 
 #uses a version of egcd to invert a
@@ -177,8 +175,16 @@ function iszero(a::FieldPoint)
     return a.value==0
 end
 
-#sec2 v2, table 3:
+#sec1 v2, 2.3.9
+function convert(::Type{BigInt}, a::FieldPoint)
+    return a.value
+end
+
+#sec2 v2 (and v1), table 3:
+const FIELD113 = Field(113, BigInt(512+1)) #v1 only
+const FIELD131 = Field(131, BigInt(256+8+4+1)) #v1 only
 const FIELD163 = Field(163, BigInt(128+64+8+1))
+const FIELD193 = Field(193, (BigInt(1)<<15) + BigInt(1)) #v1 only
 const FIELD233 = Field(233, (BigInt(1)<<74) + BigInt(1))
 const FIELD239A = Field(239, (BigInt(1)<<36) + BigInt(1))
 const FIELD239B = Field(239, (BigInt(1)<<158) + BigInt(1))

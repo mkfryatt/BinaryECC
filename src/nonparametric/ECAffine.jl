@@ -1,5 +1,4 @@
 import Base: +, -, *, ==, repr, isvalid, iszero
-using Base: ceil
 
 struct ECPointAffine <: AbstractECPoint
     x::FieldPoint
@@ -20,6 +19,7 @@ struct ECPointAffine <: AbstractECPoint
 end
 
 #sec1v2 2.3.4
+#convert hex string (referred to in document as octet string) to a field element
 function ECPointAffine(s::String, ec::EC)
     s = replace(s, " " => "")
 
@@ -110,18 +110,4 @@ end
 
 function iszero(p::ECPointAffine)
     return p.isId
-end
-
-function montpow(p::ECPointAffine, n::Integer)
-    R0 = p
-    R1 = double(p)
-    for i in (bits(n)-2):-1:0
-        bit = (n>>>i)&1
-        if bit==0
-            R1, R0 = R0+R1, double(R0)
-        else
-            R0, R1 = R0+R1, double(R1)
-        end
-    end
-    return R0
 end
