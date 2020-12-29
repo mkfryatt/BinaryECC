@@ -62,7 +62,7 @@ function reduce(a::FieldPoint)
     b = a.value
 
     #left to right, get rid of the extra bits of b
-    for i in (k+D):-1:D
+    for i in (k+a.field.degree):-1:a.field.degree
         if b & (BigInt(1)<<i) != BigInt(0)
             b ⊻= t + (BigInt(1)<<i)
         end
@@ -142,7 +142,7 @@ function square(a::FieldPoint)
         counter <<= 1
     end
 
-    return reduce(FieldPoint(result, a.field))
+    return reduce(FieldPoint(b, a.field))
 end
 
 #right to left, square and multiply method
