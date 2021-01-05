@@ -36,7 +36,7 @@ function isvalid(T::CurveDomainParams{D,R}, t::Int) where {D,R}
 
     #2
     reductions = Dict([
-        (163, Int128(128+64+8+1)),
+        (163, (Int128(128+64+8+1)),
         (233, (Int128(1)<<74) + Int128(1)),
         (239, Int128(1)<<36) + Int128(1)),
         (483, (Int128(1)<<12) + Int128(128+32+1)),
