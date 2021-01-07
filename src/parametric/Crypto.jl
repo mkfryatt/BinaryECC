@@ -1,9 +1,9 @@
 import Base: isvalid
 using SHA: sha256
 
-struct ECKeyPair
+struct ECKeyPair{D,R}
     d::BigInt
-    Q::ECPointAffine
+    Q::ECPointAffine{D,R}
 end
 
 struct ECDSASignature
@@ -13,15 +13,15 @@ end
 
 #sec1 v2, 3.2.1
 #Elliptic Curve Key Pair Generation Primitive
-function generate_keypair(T::CurveDomainParams)
+function generate_keypair(T::CurveDomainParams{D,R}) where {D,R}
     d = rand(1:T.n)
     Q = T.G*d
-    return ECKeyPair(d, Q)
+    return ECKeyPair{D,R}(d, Q)
 end
 
 #sec1 v2, 3.2.2.1
 #Elliptic Curve Public Key Validation Primitive
-function isvalid(Q::ECPointAffine, T::CurveDomainParams)
+function isvalid(Q::ECPointAffine{D,R}, T::CurveDomainParams{D,R}) where {D,R}
     #1
     if iszero(Q) return false end
 
@@ -41,8 +41,9 @@ end
 
 #sec1 v2, 4.1.3
 #Signing Operation
-function ecdsa_sign(T::CurveDomainParams, U::ECKeyPair, M::String)
+function ecdsa_sign(T::CurveDomainParams{D,R}, U::ECKeyPair{D,R}, M::String) where {D,R}
     #loops until it chooses ephemeral key pair that results in nonzero r,s
+    r, s = 0, 0
     while true
         #1
         ephemeral = generate_keypair(T)
@@ -72,7 +73,7 @@ end
 
 #sec1 v2, 4.1.4
 #Verifying Operation
-function ecdsa_verify(T::CurveDomainParams, Q::ECPointAffine, M::String, sig::ECDSASignature)
+function ecdsa_verify(T::CurveDomainParams{D,R}, Q::ECPointAffine{D,R}, M::String, sig::ECDSASignature) where {D,R}
     #1
     if sig.r>=T.n || sig.s>=T.n return false end
 
@@ -83,27 +84,27 @@ function ecdsa_verify(T::CurveDomainParams, Q::ECPointAffine, M::String, sig::EC
     e = digest_to_int(H, T.n)
 
     #4
-    s_inv = invert(s, T.n)
+    s_inv = invert(sig.s, T.n)
     u1 = (e*s_inv) % T.n
-    u2 = (r*s_inv) % T.n
+    u2 = (sig.r*s_inv) % T.n
 
     #5
-    R = u1*G + u2*Q
-    if iszero(R) return false end
+    R1 = u1*T.G + u2*Q
+    if iszero(R1) return false end
 
     #6
-    xbar = convert(BigInt, R.x)
+    xbar = convert(BigInt, R1.x)
 
     #7
     v = xbar % T.n
 
     #8
-    return v==r
+    return v==sig.r
 end
 
 #sec1 v2, 3.3.1
 #Elliptic Curve Diffie Hellman Primitive
-function ecdh_calculate(T::CurveDomainParams, dU::BigInt, QV::ECPointAffine)
+function ecdh_calculate(T::CurveDomainParams{D,R}, dU::BigInt, QV::ECPointAffine{D,R}) where {D,R}
     #check that QV is associated with T and valid
     if QV.ec!=T.G.ec return nothing end
     if !isvalid(QV) return nothing end
