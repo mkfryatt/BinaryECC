@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, convert
+import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, isone, convert
 using StaticArrays
 
 #D is the degree of the reduction polynomial
@@ -16,46 +16,6 @@ function FieldPoint{D,R}(s::String) where {D,R}
     if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
     value = parse(BigInt, s, base=16)
     return FieldPoint{D,R}(value)
-end
-
-#stores a number ..., b191, ..., b1, b0 as a vector of:
-#b63, b62, ..., b2, b1, b0
-#b127, b126, ..., b66, b65, b64
-#b191, b190, ..., b130, b129, b128
-#...
-function tovector(value::Integer, D::Integer)
-    numberofblocks = ceil(Int, D/64)
-    valuevector = zeros(MVector{numberofblocks, UInt64})
-    bitmask = UInt64(0) -1
-    for i in 1:numberofblocks
-        valuevector[i] = UInt64(value & bitmask)
-        value >>= 64
-    end
-    return valuevector
-end
-
-function test(vec::MVector)
-    if vec[1]!=1
-        return false
-    end
-    for i in 2:length(vec)
-        if vec[i]!=0
-            return false
-        end
-    end
-    return true
-end
-
-function getbit(vec::MVector, i::Integer)
-    bit = i%64
-    block = (i÷64) +1
-    return vec[block]>>bit & 1
-end
-
-function flipbit!(vec::MVector, i::Integer)
-    bit = i%64
-    block = (i÷64) +1
-    vec[block] ⊻= 1<<bit
 end
 
 function repr(a::FieldPoint)
@@ -96,7 +56,7 @@ function reduce(a::FieldPoint{D,R}) where {D,R}
             startblock = 1 + ((i-D)÷64)
             lowerbits = 64 - ((i-D) % 64)
             lowermask = (1<<lowerbits)-1
-            middlemask = UInt64(0)-1
+            middlemask = typemax(UInt64)
             uppermask = (1<<(64-lowerbits))-1
 
             bvec[startblock] ⊻= (R & lowermask)<<(64-lowerbits)
@@ -150,27 +110,6 @@ function square(a::FieldPoint{D,R}) where {D,R}
     return reduce(FieldPoint{D,R}(b))
 end
 
-#length of a number in bits
-function bits(a::MVector)
-    block = length(a)
-    while a[block]==0
-        block -= 1
-        if block==0
-            return 0
-        end
-    end
-
-    i = 0
-    for i in 0:64
-        if a[block] == (UInt64(1)<<i)
-            return i+1 + 64*(block-1)
-        elseif a[block] < (UInt64(1)<<i)
-            return i + 64*(block-1)
-        end
-    end
-    return 64*block
-end
-
 #uses a version of egcd to invert a
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography
 function inv(a::FieldPoint{D,R}) where {D,R}
@@ -183,7 +122,7 @@ function inv(a::FieldPoint{D,R}) where {D,R}
     flipbit!(g1, 0)
     g2 = zeros(typeof(a.value))
 
-    while !test(u)
+    while !isone(u)
         j = bits(u) - bits(v)
         if j<0
             (u, v) = (v, u)
@@ -196,7 +135,7 @@ function inv(a::FieldPoint{D,R}) where {D,R}
         upperbits = j%64
         lowerbits = 64-upperbits
         lowermask = (1<<lowerbits) -1
-        uppermask = (UInt64(0)-1) ⊻ lowermask
+        uppermask = typemax(UInt64) ⊻ lowermask
         startblock = (j÷64+1)
 
         u[startblock] ⊻= (v[1]&lowermask)<<upperbits
@@ -223,8 +162,8 @@ function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
     c = FieldPoint{D,R}(1)
     squaring = a
 
-    while b>BigInt(0)
-        if b & BigInt(1) == BigInt(1)
+    while b>0
+        if b&1 == 1
             c *= squaring
         end
         squaring *= squaring
@@ -240,12 +179,7 @@ function random(::Type{FieldPoint{D,R}}) where {D,R}
 end
 
 function iszero(a::FieldPoint)
-    for block in a.value
-        if block!=0
-            return false
-        end
-    end
-    return true
+    return iszero(a.value)
 end
 
 #sec1 v2, 2.3.9
@@ -257,13 +191,75 @@ function convert(::Type{BigInt}, a::FieldPoint)
     return b
 end
 
+#stores a number ..., b191, ..., b1, b0 as a vector of:
+#b63, b62, ..., b2, b1, b0
+#b127, b126, ..., b66, b65, b64
+#b191, b190, ..., b130, b129, b128
+#...
+#i.e. little endian on 64bit block basis (rather than byte by byte)
+function tovector(value::Integer, D::Integer)
+    numberofblocks = ceil(Int, D/64)
+    valuevector = zeros(MVector{numberofblocks, UInt64})
+    bitmask = UInt64(0) -1
+    for i in 1:numberofblocks
+        valuevector[i] = UInt64(value & bitmask)
+        value >>= 64
+    end
+    return valuevector
+end
+
+function isone(vec::MVector)
+    if vec[1]!=1
+        return false
+    end
+    for i in 2:length(vec)
+        if vec[i]!=0
+            return false
+        end
+    end
+    return true
+end
+
+function getbit(vec::MVector, i::Integer)
+    bit = i%64
+    block = (i÷64) +1
+    return vec[block]>>bit & 1
+end
+
+function flipbit!(vec::MVector, i::Integer)
+    bit = i%64
+    block = (i÷64) +1
+    vec[block] ⊻= 1<<bit
+end
+
+#length of a number in bits
+function bits(a::MVector)
+    block = length(a)
+    while a[block]==0
+        block -= 1
+        if block==0
+            return 0
+        end
+    end
+
+    i = 0
+    for i in 0:64
+        if a[block] == (UInt64(1)<<i)
+            return i+1 + 64*(block-1)
+        elseif a[block] < (UInt64(1)<<i)
+            return i + 64*(block-1)
+        end
+    end
+    return 64*block
+end
+
 #sec2 v2 (and v1), table 3:
-FieldPoint113 = FieldPoint{113, Int128(512+1)} #v1 only
-FieldPoint131 = FieldPoint{131, Int128(256+8+4+1)} #v1 only
-FieldPoint163 = FieldPoint{163, Int128(128+64+8+1)}
-FieldPoint193 = FieldPoint{193, (Int128(1)<<15) + Int128(1)} #v1 only
-FieldPoint233 = FieldPoint{233, (Int128(1)<<74) + Int128(1)}
-FieldPoint239 = FieldPoint{239, (Int128(1)<<36) + Int128(1)}
-FieldPoint283 = FieldPoint{283, (Int128(1)<<12) + Int128(128+32+1)}
-FieldPoint409 = FieldPoint{409, (Int128(1)<<87) + Int128(1)}
-FieldPoint571 = FieldPoint{571, (Int128(1)<<10) + Int128(32+4+1)}
+FieldPoint113 = FieldPoint{113, UInt128(512+1)} #v1 only
+FieldPoint131 = FieldPoint{131, UInt128(256+8+4+1)} #v1 only
+FieldPoint163 = FieldPoint{163, UInt128(128+64+8+1)}
+FieldPoint193 = FieldPoint{193, (UInt128(1)<<15) + UInt128(1)} #v1 only
+FieldPoint233 = FieldPoint{233, (UInt128(1)<<74) + UInt128(1)}
+FieldPoint239 = FieldPoint{239, (UInt128(1)<<36) + UInt128(1)}
+FieldPoint283 = FieldPoint{283, (UInt128(1)<<12) + UInt128(128+32+1)}
+FieldPoint409 = FieldPoint{409, (UInt128(1)<<87) + UInt128(1)}
+FieldPoint571 = FieldPoint{571, (UInt128(1)<<10) + UInt128(32+4+1)}

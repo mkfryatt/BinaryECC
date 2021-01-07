@@ -1,2 +1,2 @@
 # BinaryECC
-An Elliptic Curve Cryptography library that uses binary finite fields.
+An Elliptic Curve Cryptography library using binary finite fields.
