@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, isone, convert
+import Base: +, -, *, /, ^, ==, repr, inv, iszero, isone, convert
 using StaticArrays
 
 #D is the degree of the reduction polynomial
@@ -13,8 +13,12 @@ end
 #convert a hex string to a field element
 function FieldPoint{D,R}(s::String) where {D,R}
     s = replace(s, " " => "")
-    if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
-    value = parse(BigInt, s, base=16)
+    if length(s)!=ceil(Int,D/8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
+    value = zeros(MVector{ceil(Int,D/64),UInt64})
+    for i in 1:length(value)
+        range = max(1, length(s)-16*i+1):(length(s)-16*(i-1))
+        value[i] = parse(UInt64, s[range], base=16)
+    end
     return FieldPoint{D,R}(value)
 end
 
@@ -55,9 +59,9 @@ function reduce(a::FieldPoint{D,R}) where {D,R}
             #b ⊻= R<<(i-D)
             startblock = 1 + ((i-D)÷64)
             lowerbits = 64 - ((i-D) % 64)
-            lowermask = (1<<lowerbits)-1
+            lowermask = (UInt64(1)<<lowerbits)-1
             middlemask = typemax(UInt64)
-            uppermask = (1<<(64-lowerbits))-1
+            uppermask = (UInt64(1)<<(64-lowerbits))-1
 
             bvec[startblock] ⊻= (R & lowermask)<<(64-lowerbits)
             bvec[startblock+1] ⊻= (R>>lowerbits) & middlemask
@@ -174,8 +178,12 @@ function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
 end
 
 function random(::Type{FieldPoint{D,R}}) where {D,R}
-    range = BigInt(0):((BigInt(1)<<D)-BigInt(1))
-    return FieldPoint{D,R}(rand(range))
+    value = zeros(MVector{ceil(Int,D/64),UInt64})
+    for i in 1:(length(value)-1)
+        value[i] = rand(UInt64)
+    end
+    value[length(value)] = rand(1:(UInt64(1)<<(64-(D%64))))-1
+    return FieldPoint{D,R}(value)
 end
 
 function iszero(a::FieldPoint)
@@ -189,6 +197,17 @@ function convert(::Type{BigInt}, a::FieldPoint)
         b += BigInt(a.value[i])<<(64*(i-1))
     end
     return b
+end
+
+#sec1 v2, 2.3.5
+function convert(::Type{String}, a::FieldPoint{D,R}) where {D,R}
+    M = ""
+    for block in a.value
+        Mi = string(block, base=16)
+        Mi = "0"^(8-length(Mi)) *Mi
+        M = Mi*M
+    end
+    return M[(length(M)-ceil(Int,D/8)+1):length(M)]
 end
 
 #stores a number ..., b191, ..., b1, b0 as a vector of:
