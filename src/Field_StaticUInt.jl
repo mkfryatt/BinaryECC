@@ -19,6 +19,9 @@ function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a.value==b.value
 end
 
+"""
+other addition
+"""
 function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return FieldPoint{D,R}(a.value ⊻ b.value)
 end

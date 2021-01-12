@@ -6,14 +6,15 @@ struct ECPointAffine{D,R} <: AbstractECPoint
     ECPointAffine(x::FieldPoint{D,R}, y::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
         new{D,R}(x, y, ec)
 
-    ECPointAffine(x::FieldPoint{D,R}, y::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
-        new{D,R}(x, y, ec)
-
     ECPointAffine(ec::EC{D,R}) where {D,R} =
         new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
 #sec1v2 2.3.4
+"""
+    ECPointAffine(s)
+blah
+"""
 function ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
     s = replace(s, " " => "")
 
@@ -44,6 +45,9 @@ function ==(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
     return p1.x==p2.x && p1.y==p2.y && iszero(p1)==iszero(p2) && p1.ec==p2.ec
 end
 
+"""
+addition
+"""
 function +(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
