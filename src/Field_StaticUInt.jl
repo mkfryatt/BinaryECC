@@ -20,7 +20,8 @@ function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
 end
 
 """
-other addition
+    +(x1::FieldPoint{D,R}, x2::FieldPoint{D,R}) where {D,R}
+Addition of elements x1, x2 in the field represented by D and R.
 """
 function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return FieldPoint{D,R}(a.value ⊻ b.value)

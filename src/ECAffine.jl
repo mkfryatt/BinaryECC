@@ -1,19 +1,27 @@
+"""
+    ECPointAffine{D,R} <: AbstractECPoint
+Represents a point on an elliptic curve over the field represented by D and R.
+
+Contains fields ``x``, ``y``, ec.
+"""
 struct ECPointAffine{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
     y::FieldPoint{D,R}
     ec::EC{D,R}
-
-    ECPointAffine(x::FieldPoint{D,R}, y::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
-        new{D,R}(x, y, ec)
-
-    ECPointAffine(ec::EC{D,R}) where {D,R} =
-        new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
-#sec1v2 2.3.4
 """
-    ECPointAffine(s)
-blah
+    ECPointAffine(ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function ECPointAffine(ec::EC{D,R}) where {D,R}
+    return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+end
+
+"""
+    ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
+Convert a hex string to a point on the given elliptic curve
+using the procedure in SEC 2 (version 2), section 2.3.4.
 """
 function ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
     s = replace(s, " " => "")
@@ -41,12 +49,20 @@ function repr(p::ECPointAffine)
     return "("*repr(p.x)*", "*repr(p.y)*")"
 end
 
+"""
+    ==(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
+Two points are equal iff they have the same ``x`` and ``y`` coordinate,
+ and are on the same elliptic curve.
+"""
 function ==(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
     return p1.x==p2.x && p1.y==p2.y && iszero(p1)==iszero(p2) && p1.ec==p2.ec
 end
 
 """
-addition
+    +(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
+Returns ``p_1+p_2``.
+
+If the points are not on the same curve, this will throw an ECMismatchException.
 """
 function +(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
     if p1.ec!=p2.ec throw(ECMismatchException()) end
@@ -66,6 +82,10 @@ function +(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
     return ECPointAffine(x3, y3, p1.ec)
 end
 
+"""
+    -(p::ECPointAffine) where {D,R}
+Returns additive inverse of the given point, ``-p``.
+"""
 function -(p::ECPointAffine) where {D,R}
     if iszero(p) return p end
     return ECPointAffine(p.x, p.x+p.y, p.ec)
@@ -85,7 +105,12 @@ function double(p::ECPointAffine{D,R}) where {D,R}
     return ECPointAffine(x_new, y_new, p.ec)
 end
 
+"""
+    *(p::ECPointAffine, n::Integer) where {D,R}
+Returns the result of the scalar multiplication ``pn``, using a double and add method.
+"""
 function *(p::ECPointAffine, n::Integer) where {D,R}
+    if n<0 return (-p)*(-n) end
     if iszero(p) return p end
     if n==0 return ECPointAffine(p.ec) end
     if n==1 return p end
@@ -102,10 +127,18 @@ function *(p::ECPointAffine, n::Integer) where {D,R}
     return result
 end
 
+"""
+    isvalid(p::ECPointAffine)
+Returns true if ``p`` is a point on the elliptic curve that it is associated with.
+"""
 function isvalid(p::ECPointAffine)
     return iszero(p) || (p.y^2 + p.x*p.y == p.x^3 + p.ec.a*p.x^2 + p.ec.b)
 end
 
+"""
+    iszero(p::ECPointAffine)
+Returns true if ``p = \\mathcal{O}``, i.e it is the point at infinity.
+"""
 function iszero(p::ECPointAffine)
     return iszero(p.x) && iszero(p.y)
 end
