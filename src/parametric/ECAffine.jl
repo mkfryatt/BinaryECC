@@ -1,6 +1,3 @@
-import Base: +, -, *, ==, repr, isvalid, iszero
-using Base: ceil
-
 struct ECPointAffine{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
     y::FieldPoint{D,R}

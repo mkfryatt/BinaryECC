@@ -1,5 +1,3 @@
-import Base: +, -, *, ==, repr, isvalid, iszero
-
 struct ECPointLD{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
     y::FieldPoint{D,R}

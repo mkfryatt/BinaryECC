@@ -1,6 +1,3 @@
-import Base: iszero, isone, ==, ⊻, <<, >>, convert, length, zero, one, copy
-using StaticArrays
-
 #L is the number of blocks
 #T is the type of each block
 struct StaticUInt{L,T<:Unsigned}

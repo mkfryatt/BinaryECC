@@ -1,5 +1,3 @@
-import Base: +, -, *, ==, repr, isvalid, iszero
-
 struct ECPointJacobian{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
     y::FieldPoint{D,R}

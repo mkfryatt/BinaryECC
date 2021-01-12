@@ -1,5 +1,3 @@
-import Base: convert, +, ==
-
 function convert(::Type{ECPointAffine{D,R}}, p::ECPointProjective{D,R}) where {D,R}
     if iszero(p) return ECPointAffine{D,R}(ec) end
     z_inv = inv(p.z)

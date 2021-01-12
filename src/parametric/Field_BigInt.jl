@@ -1,5 +1,3 @@
-import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, convert
-
 #D is the degree of the reduction polynomial
 #R is the reduction polynomial without the x^D term
 struct FieldPoint{D,R}

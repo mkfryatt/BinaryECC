@@ -1,5 +1,3 @@
-import Base: -, *, ==, repr
-
 struct ECMismatchException <: Exception end
 
 abstract type AbstractECPoint end

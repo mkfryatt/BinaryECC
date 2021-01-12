@@ -1,6 +1,3 @@
-import Base: isvalid
-using SHA: sha256
-
 struct ECKeyPair{D,R}
     d::BigInt
     Q::ECPointAffine{D,R}

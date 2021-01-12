@@ -1,5 +1,3 @@
-import Base: isvalid
-
 #T is the tuple of curve domain params
 #Defined by sec1v2, 3.1.2
 #T = (m, f(x), a, b, G, n, h)
@@ -130,18 +128,6 @@ const SECT233R1 = CurveDomainParams(
     ),
     parse(BigInt, "0100 00000000 00000000 00000000 0013E974 E72F8A69 22031D26 03CFE0D7", base=16),
     2
-)
-
-const SECT239K1 = CurveDomainParams(
-    ECPointAffine(
-        "04 29A0B6A8 87A983E9 730988A6 8727A8B2 D126C44C C2CC7B2A 65551930 35DC7631 0804F12E 549BDB01 1C103089 E73510AC B275FC31 2A5DC6B7 6553F0CA",
-        EC(
-            FieldPoint239(0),
-            FieldPoint239(1)
-        )
-    ),
-    parse(BigInt, "2000 00000000 00000000 00000000 005A79FE C67CB6E9 1F1C1DA8 00E478A5", base=16),
-    4
 )
 
 const SECT283K1 = CurveDomainParams(
