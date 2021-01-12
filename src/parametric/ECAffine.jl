@@ -4,17 +4,16 @@ using Base: ceil
 struct ECPointAffine{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
     y::FieldPoint{D,R}
-    isId::Bool
     ec::EC{D,R}
 
-    ECPointAffine(x::FieldPoint{D,R}, y::FieldPoint{D,R}, isId::Bool, ec::EC{D,R}) where {D,R} =
-        new{D,R}(x, y, isId, ec)
+    ECPointAffine(x::FieldPoint{D,R}, y::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
+        new{D,R}(x, y, ec)
 
     ECPointAffine(x::FieldPoint{D,R}, y::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
-        new{D,R}(x, y, false, ec)
+        new{D,R}(x, y, ec)
 
     ECPointAffine(ec::EC{D,R}) where {D,R} =
-        new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), true, ec)
+        new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
 #sec1v2 2.3.4
@@ -107,5 +106,5 @@ function isvalid(p::ECPointAffine)
 end
 
 function iszero(p::ECPointAffine)
-    return p.isId
+    return iszero(p.x) && iszero(p.y)
 end
