@@ -44,8 +44,8 @@ function reduce(a::FieldPoint{D,R}) where {D,R}
     #iterate over the excess bits of a, left to right
     for i in (64*length(b)-1):-1:D
         if getbit(b, i)==1
-            flipbit!(b, i)
-            b = shiftedxor(b, r, i-D)
+            b = flipbit(b, i)
+            b ⊻= r << (i-D)
         end
     end
 
@@ -59,12 +59,13 @@ function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     if a.value==b.value return square(a) end
 
     c = zero(StaticUInt{length(a.value)*2,UInt64})
-    b = changelength(b.value, 2*length(a.value))
+    shiftedb = changelength(b.value, 2*length(a.value))
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
-            c = shiftedxor(c, b, i)
+            c ⊻= shiftedb
         end
+        shiftedb <<= 1
     end
 
     return reduce(FieldPoint{D,R}(c))
@@ -75,7 +76,7 @@ function square(a::FieldPoint{D,R}) where {D,R}
     b = zero(StaticUInt{ceil(Int, D/32),UInt64})
     for i in 0:(D-1)
         if getbit(a.value,i)==1
-            flipbit!(b, i*2)
+            b = flipbit(b, i*2)
         end
     end
 
@@ -88,8 +89,7 @@ function inv(a::FieldPoint{D,R}) where {D,R}
     if iszero(a.value) throw(DivideError()) end
 
     u = a.value
-    v = typeof(a.value)(R)
-    flipbit!(v, D)
+    v = flipbit(typeof(a.value)(R), D)
     g1 = one(typeof(a.value))
     g2 = zero(typeof(a.value))
 
@@ -100,8 +100,8 @@ function inv(a::FieldPoint{D,R}) where {D,R}
             g1, g2 = g2, g1
             j = -j
         end
-        u = shiftedxor(u, v, j)
-        g1 = shiftedxor(g1, g2, j)
+        u ⊻= v << j
+        g1 ⊻= g2 << j
     end
     return FieldPoint{D,R}(g1)
 end

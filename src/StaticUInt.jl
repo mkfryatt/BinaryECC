@@ -65,9 +65,7 @@ function getbit(x::StaticUInt{L,T}, i::Integer) where {L,T}
     blocksize = sizeof(T)*8
     bit = i%blocksize
     block = (i÷(8*sizeof(T))) +1
-    if block>L
-        return 0
-    end
+    if block>L return 0 end
     return x.value[block]>>bit & 1
 end
 
@@ -86,24 +84,9 @@ function bits(x::StaticUInt{L,T}) where {L,T}
     block = L
     while x.value[block]==0
         block -= 1
-        if block==0
-            return 0
-        end
+        if block==0 return 0 end
     end
-
-    blocksize = sizeof(T)*8
-    for i in 0:(blocksize-1)
-        if x.value[block] == (T(1)<<i)
-            return i+1 + blocksize*(block-1)
-        elseif x.value[block] < (T(1)<<i)
-            return i + blocksize*(block-1)
-        end
-    end
-    return blocksize*block
-end
-
-function ==(x::StaticUInt{L,T}, y::StaticUInt{L,T}) where {L,T}
-    return x.value==y.value
+    return sizeof(T)*8*block - leading_zeros(x.value[block])
 end
 
 function ==(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
@@ -135,10 +118,8 @@ function ⊻(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
 end
 
 function <<(x::StaticUInt{L,T}, shift::Integer) where {L,T}
-    if shift<0
-        throw(ArgumentError("Cannot shift by a negative amount"))
-    elseif shift==0
-        return x
+    if shift<0 x>>(-shift)
+    elseif shift==0 return x
     end
 
     blocksize = 8*sizeof(T)
@@ -149,24 +130,19 @@ function <<(x::StaticUInt{L,T}, shift::Integer) where {L,T}
     uppermask = (T(1)<<upperbits)-1
 
     value = zeros(MVector{L,T})
-
-    for block in 1:(L-blockshift)
+    value[L] = (x.value[L-blockshift]&lowermask)<<upperbits
+    for block in 1:(L-blockshift-1)
         value[block+blockshift] += (x.value[block]&lowermask)<<upperbits
-        if block+blockshift<L
-            value[block+blockshift+1] += (x.value[block]>>lowerbits)&uppermask
-        end
+        value[block+blockshift+1] += (x.value[block]>>lowerbits)&uppermask
     end
 
     return StaticUInt{L,T}(value)
 end
 
 #returns x ⊻ (y<<shift)
-#TODO
 function shiftedxor(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Integer) where {L1,L2,T}
-    if shift<0
-        throw(ArgumentError("Cannot shift by a negative amount"))
-    elseif shift==0
-        return x ⊻ y
+    if shift<0 throw(ArgumentError("Cannot shift by a negative amount"))
+    elseif shift==0 return x ⊻ y
     end
 
     blocksize = 8*sizeof(T)
@@ -176,23 +152,25 @@ function shiftedxor(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Integer) wh
     lowermask = (T(1)<<lowerbits)-1
     uppermask = (T(1)<<upperbits)-1
 
-    value = copy(a.value)
-
-    for block in 1:(L1-blockshift)
-        value[block+blockshift] ⊻= (x.value[block]&lowermask)<<upperbits
-        if block+blockshift<L
-            value[block+blockshift+1] ⊻= (x.value[block]>>lowerbits)&uppermask
-        end
+    value = copy(x.value)
+    top = L2
+    if L2+blockshift==L1
+        top = L2-1
+        value[L1] ⊻= (y.value[L2]&lowermask)<<upperbits
+    elseif L2+blockshift>L1
+        top = L1-blockshift-1
+    end
+    for block in 1:top
+        value[block+blockshift] ⊻= (y.value[block]&lowermask)<<upperbits
+        value[block+blockshift+1] ⊻= (y.value[block]>>lowerbits)&uppermask
     end
 
     return StaticUInt{L1,T}(value)
 end
 
 function >>(x::StaticUInt{L,T}, shift::Integer) where {L,T}
-    if shift<0
-        throw(ArgumentError("Cannot shift by a negative amount"))
-    elseif shift==0
-        return x
+    if shift<0 x<<(-shift)
+    elseif shift==0 return x
     end
 
     blocksize = 8*sizeof(T)
@@ -203,12 +181,10 @@ function >>(x::StaticUInt{L,T}, shift::Integer) where {L,T}
     uppermask = (T(1)<<upperbits)-1
 
     value = zeros(MVector{L,T})
-
-    for block in (1+blockshift):L
-        value[block-blockshift] = (x.value[block]>>lowerbits)&uppermask
-        if block-blockshift>1
-            value[block-blockshift-1] += (x.value[block]&lowermask)<<upperbits
-        end
+    value[1] = (x.value[1+blockshift]>>lowerbits)&uppermask
+    for block in (2+blockshift):L
+        value[block-blockshift] += (x.value[block]>>lowerbits)&uppermask
+        value[block-blockshift-1] += (x.value[block]&lowermask)<<upperbits
     end
     return StaticUInt{L,T}(value)
 end
