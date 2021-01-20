@@ -9,6 +9,31 @@
 #n: n
 #h: h
 
+"""
+    CurveDomainParams{D,R}
+Represents the elliptic curve domain  parameters over ``\\mathbb{F}_{2^m}``
+described in SEC 1 (version 2), 3.1.2.
+
+It contains three fields:
+- ``G``, a generating point, in affine coordinates
+- ``n``, the order of ``G`` (i.e. the smallest ``n`` satisfying ``G \\cdot n = \\mathcal{O}``)
+- ``h``, the cofactor, ``h = \\#E(\\mathbb{F}_{2^m}) / n``
+
+The other elements of the septuple described in 3.1.2 are accessible through
+the fields of ``G``.
+
+Several standard curves domain parameters (taken from SEC 2, section 3) are available:
+- SECT163K1
+- SECT163R1
+- SECT233K1
+- SECT233R1
+- SECT283K1
+- SECT283R1
+- SECT409K1
+- SECT409R1
+- SECT571K1
+- SECT571R1
+"""
 struct CurveDomainParams{D,R}
     G::ECPointAffine{D,R} #generator point
     n::BigInt #order of G, ie nG = O
@@ -19,6 +44,13 @@ end
 
 #sec1 v2, 3.1.2.2.1
 #Elliptic Curve Domain Parameters over F_{2^m} Validation Primitive
+"""
+    isvalid(T::CurveDomainParams{D,R}, t::Int) where {D,R}
+Returns true if the curve domain parameters ``T`` meet the security level ``t``,
+ using the procedure in SEC 1 (version 2) 3.1.2.2.1, and false otherwise.
+
+Note: does not currently perform step 6 (checking that ``n`` is prime).
+"""
 function isvalid(T::CurveDomainParams{D,R}, t::Int) where {D,R}
     #1
     levels = [80, 112, 128, 192, 256]

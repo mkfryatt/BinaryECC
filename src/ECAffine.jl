@@ -46,6 +46,10 @@ function ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
     return ECPointAffine(x, y, ec)
 end
 
+"""
+    repr(p::ECPointAffine)
+Returns a string representation of an elliptic curve point, "``(x, y)``".
+"""
 function repr(p::ECPointAffine)
     return "("*repr(p.x)*", "*repr(p.y)*")"
 end

@@ -22,6 +22,10 @@ struct ECPointJacobian{D,R} <: AbstractECPoint
         new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
+"""
+    repr(p::ECPointJacobian)
+Returns a string representation of an elliptic curve point, "``(x, y, z)``".
+"""
 function repr(p::ECPointJacobian)
     return "("*repr(p.x)*", "*repr(p.y)*", "*repr(p.z)*")"
 end

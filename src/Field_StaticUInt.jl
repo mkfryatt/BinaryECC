@@ -6,7 +6,19 @@ Represents a point in the binary field which has order ``2^D`` and reduction pol
 
 ``x^D + x^{r_n} + \\cdots + x^{r_0}``
 
-where ``R = r_nr_{n-1}\\ldots r_1_r_0`` in binary.
+where ``R = r_n r_{n-1}\\ldots r_1 r_0`` in binary.
+
+Types for points in the standard fields (taken from SEC 2, table 3)
+ are available:
+- FieldPoint113
+- FieldPoint131
+- FieldPoint163
+- FieldPoint193
+- FieldPoint233
+- FieldPoint239
+- FieldPoint283
+- FieldPoint409
+- FieldPoint571
 """
 struct FieldPoint{D,R}
     value::StaticUInt
@@ -14,8 +26,11 @@ struct FieldPoint{D,R}
     FieldPoint{D,R}(value::StaticUInt) where {D,R} = new(value)
 end
 
-#sec1v2 2.3.6
-#convert a hex string to a field element
+"""
+    FieldPoint{D,R}(s::String) where {D,R}
+Using the procedure set out in SEC 1 (version 2) 2.3.6,
+this converts a hex string to a field element.
+"""
 function FieldPoint{D,R}(s::String) where {D,R}
     s = replace(s, " " => "")
     if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
@@ -23,37 +38,43 @@ function FieldPoint{D,R}(s::String) where {D,R}
     return FieldPoint{D,R}(value)
 end
 
-#sec2 v2 (and v1), table 3:
-FieldPoint113 = FieldPoint{113, UInt16(512+1)} #v1 only
-FieldPoint131 = FieldPoint{131, UInt16(256+8+4+1)} #v1 only
-FieldPoint163 = FieldPoint{163, UInt16(128+64+8+1)}
-FieldPoint193 = FieldPoint{193, (UInt16(1)<<15) + UInt16(1)} #v1 only
-FieldPoint233 = FieldPoint{233, (UInt128(1)<<74) + UInt128(1)}
-FieldPoint239 = FieldPoint{239, (UInt64(1)<<36) + UInt64(1)}
-FieldPoint283 = FieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1)}
-FieldPoint409 = FieldPoint{409, (UInt128(1)<<87) + UInt128(1)}
-FieldPoint571 = FieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1)}
 
+"""
+    ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns true if the points ``a`` and ``b`` from the same field are equal,
+ and false otherwise.
+"""
 function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a.value==b.value
 end
 
 """
-    +(x1::FieldPoint{D,R}, x2::FieldPoint{D,R}) where {D,R}
-Addition of elements x1, x2 in the field represented by D and R.
+    +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the result of ``a+b``.
 """
 function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return FieldPoint{D,R}(a.value ⊻ b.value)
 end
 
+"""
+    -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the result of ``a-b``.
+"""
 function -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a+b
 end
 
+"""
+    -(a::FieldPoint{D,R}) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the result of ``-a``.
+"""
 function -(a::FieldPoint{D,R}) where {D,R}
-    return a
+    return copy(a)
 end
 
+#returns the least element b, such that a ≡ b (mod R)
+#note: this is the standard algorithm, but faster specialised versions of it are
+#available for each of the standard fields (in Field_fastreduce.jl)
 function reduce(a::FieldPoint{D,R}) where {D,R}
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
@@ -74,6 +95,11 @@ function reduce(a::FieldPoint{D,R}) where {D,R}
 end
 
 #right to left, shift and add
+"""
+    *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the
+ result of ``a \\cdot b``.
+"""
 function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     if a.value==b.value return square(a) end
 
@@ -112,7 +138,7 @@ function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return FieldPoint{D,R}(c)
 end
 
-#supposedly faster, but not :(
+#TODO fix: supposed to be faster than shift-and-add, but not :(
 #Guide to ECC, Algorithm 2.34, right to left comb method
 function comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     if a.value==b.value return square(a) end
@@ -132,7 +158,8 @@ function comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return reduce(FieldPoint{D,R}(c))
 end
 
-#add a zero between every digit of the original
+#squares the given number, slightly faster than using the standard * algorithm
+#adds a zero between every digit of the original
 function square(a::FieldPoint{D,R}) where {D,R}
     b = zero(StaticUInt{ceil(Int, D/32),UInt64})
     for i in 0:(D-1)
@@ -146,6 +173,11 @@ end
 
 #uses a version of egcd to invert a
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography
+"""
+    inv(a::FieldPoint{D,R}) where {D,R}
+Returns a new element ``b`` such that ``a b ≡ 1 \\pmod{f_R(x)}``
+ (where ``f_R(x)`` is the reduction polynomial for the field).
+"""
 function inv(a::FieldPoint{D,R}) where {D,R}
     if iszero(a.value) throw(DivideError()) end
 
@@ -168,11 +200,21 @@ function inv(a::FieldPoint{D,R}) where {D,R}
     return FieldPoint{D,R}(g1)
 end
 
+"""
+    /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the
+result of ``\\frac{a}{b}``.
+"""
 function /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a * inv(b)
 end
 
 #right to left, square and multiply method
+"""
+    ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the
+result of ``a^b``.
+"""
 function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
     c = one(typeof(a))
     squaring = a
@@ -188,26 +230,63 @@ function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
     return c
 end
 
+"""
+    random(::Type{FieldPoint{D,R}}) where {D,R}
+Returns a random element of the specified field.
+"""
 function random(::Type{FieldPoint{D,R}}) where {D,R}
     return FieldPoint{D,R}(random(StaticUInt{ceil(Int,D/64),UInt64}, D-1))
 end
 
+"""
+    iszero(a::FieldPoint)
+Returns true if ``a`` is the zero element of the field represented by D and R,
+ and false otherwise.
+"""
 function iszero(a::FieldPoint)
     return iszero(a.value)
 end
 
+"""
+    zero(::Type{FieldPoint{D,R}}) where {D,R}
+Returns the zero element of the specified field.
+"""
 function zero(::Type{FieldPoint{D,R}}) where {D,R}
     return FieldPoint{D,R}(zero(StaticUInt{ceil(Int,D/64),UInt64}))
 end
 
+"""
+    isone(a::FieldPoint)
+Returns true if ``a`` is equal to one, and false otherwise.
+"""
 function isone(a::FieldPoint)
     return isone(a.value)
 end
 
+"""
+    one(::Type{FieldPoint{D,R}}) where {D,R}
+Returns element 1 of the specified field.
+"""
 function one(::Type{FieldPoint{D,R}}) where {D,R}
     return FieldPoint{D,R}(one(StaticUInt{ceil(Int,D/64),UInt64}))
 end
 
+"""
+    convert(::Type{BigInt}, a::FieldPoint)
+Converts the given field point to a number (of type BigInt), following the procedure
+ set out in SEC 1 (version 2) 2.3.9.
+"""
 function convert(::Type{BigInt}, a::FieldPoint)
     return convert(BigInt, a.value)
 end
+
+#sec2 v2 (and v1), table 3:
+FieldPoint113 = FieldPoint{113, UInt16(512+1)} #v1 only
+FieldPoint131 = FieldPoint{131, UInt16(256+8+4+1)} #v1 only
+FieldPoint163 = FieldPoint{163, UInt16(128+64+8+1)}
+FieldPoint193 = FieldPoint{193, (UInt16(1)<<15) + UInt16(1)} #v1 only
+FieldPoint233 = FieldPoint{233, (UInt128(1)<<74) + UInt128(1)}
+FieldPoint239 = FieldPoint{239, (UInt64(1)<<36) + UInt64(1)}
+FieldPoint283 = FieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1)}
+FieldPoint409 = FieldPoint{409, (UInt128(1)<<87) + UInt128(1)}
+FieldPoint571 = FieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1)}

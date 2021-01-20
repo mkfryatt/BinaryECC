@@ -17,20 +17,18 @@ ECPointLD{D,R}
 ECMismatchException
 ```
 
-## Elliptic Curve Functions
+## Curve Functions
 ```@docs
 ==(ec1::EC{D,R}, ec2::EC{D,R}) where {D,R}
+
+repr(ec::EC)
 ```
 
-## Elliptic Curve Point Functions
+## Point Arithmetic
 ```@docs
-ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
-
-ECPointAffine(ec::EC{D,R}) where {D,R}
-
 ==(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
 
-+(::ECPointAffine{D,R},::ECPointAffine{D,R}) where {D,R}
++(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
 
 -(p::ECPointAffine) where {D,R}
 
@@ -38,9 +36,24 @@ ECPointAffine(ec::EC{D,R}) where {D,R}
 
 *(p::ECPointAffine, n::Integer) where {D,R}
 
-montpow(p::AbstractECPoint, n::Integer)
+montmul
+
+iszero(p::ECPointAffine)
+```
+
+## Miscellaneous Point Functions
+```@docs
+ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
+
+ECPointAffine(ec::EC{D,R}) where {D,R}
 
 isvalid(p::ECPointAffine)
 
-iszero(p::ECPointAffine)
+repr(p::ECPointAffine)
+
+repr(p::ECPointProjective)
+
+repr(p::ECPointJacobian)
+
+repr(p::ECPointLD)
 ```
