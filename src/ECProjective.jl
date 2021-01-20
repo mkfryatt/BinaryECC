@@ -1,3 +1,14 @@
+"""
+    ECPointProjective{D,R} <: AbstractECPoint
+Represents a point on an elliptic curve over the field represented by D and R.
+Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on.
+
+``E: y^2z +  xyz = x^3 + ax^2z + bz^3``
+
+Each (affine) point on the curve is represented by a set of projective points, 
+``\\{(\\lambda x, \\lambda y, \\lambda z) : \\lambda \\in K^* \\}``
+(where ``K^*`` is the binary field that the curve is based on).
+"""
 struct ECPointProjective{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
     y::FieldPoint{D,R}

@@ -8,6 +8,12 @@ AbstractECPoint
 
 ECPointAffine{D,R}
 
+ECPointProjective{D,R}
+
+ECPointJacobian{D,R}
+
+ECPointLD{D,R}
+
 ECMismatchException
 ```
 
@@ -31,6 +37,8 @@ ECPointAffine(ec::EC{D,R}) where {D,R}
 -(p1::AbstractECPoint, p2::AbstractECPoint)
 
 *(p::ECPointAffine, n::Integer) where {D,R}
+
+montpow(p::AbstractECPoint, n::Integer)
 
 isvalid(p::ECPointAffine)
 

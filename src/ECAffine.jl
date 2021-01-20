@@ -1,8 +1,9 @@
 """
     ECPointAffine{D,R} <: AbstractECPoint
 Represents a point on an elliptic curve over the field represented by D and R.
+Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
 
-Contains fields ``x``, ``y``, ec.
+``E: y^2 +  xy = x^3 + ax^2 + b``
 """
 struct ECPointAffine{D,R} <: AbstractECPoint
     x::FieldPoint{D,R}
@@ -107,7 +108,7 @@ end
 
 """
     *(p::ECPointAffine, n::Integer) where {D,R}
-Returns the result of the scalar multiplication ``pn``, using a double and add method.
+Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
 """
 function *(p::ECPointAffine, n::Integer) where {D,R}
     if n<0 return (-p)*(-n) end
