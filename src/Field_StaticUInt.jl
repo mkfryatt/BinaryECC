@@ -1,5 +1,13 @@
 #D is the degree of the reduction polynomial
 #R is the reduction polynomial without the x^D term
+"""
+    FieldPoint{D,R}
+Represents a point in the binary field which has order ``2^D`` and reduction polynomial
+
+``x^D + x^{r_n} + \\cdots + x^{r_0}``
+
+where ``R = r_nr_{n-1}\\ldots r_1_r_0`` in binary.
+"""
 struct FieldPoint{D,R}
     value::StaticUInt
     FieldPoint{D,R}(value::Integer) where {D,R} = new(StaticUInt{ceil(Int,D/64),UInt64}(value))
@@ -14,6 +22,17 @@ function FieldPoint{D,R}(s::String) where {D,R}
     value = StaticUInt{ceil(Int,D/64),UInt64}(s)
     return FieldPoint{D,R}(value)
 end
+
+#sec2 v2 (and v1), table 3:
+FieldPoint113 = FieldPoint{113, UInt16(512+1)} #v1 only
+FieldPoint131 = FieldPoint{131, UInt16(256+8+4+1)} #v1 only
+FieldPoint163 = FieldPoint{163, UInt16(128+64+8+1)}
+FieldPoint193 = FieldPoint{193, (UInt16(1)<<15) + UInt16(1)} #v1 only
+FieldPoint233 = FieldPoint{233, (UInt128(1)<<74) + UInt128(1)}
+FieldPoint239 = FieldPoint{239, (UInt64(1)<<36) + UInt64(1)}
+FieldPoint283 = FieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1)}
+FieldPoint409 = FieldPoint{409, (UInt128(1)<<87) + UInt128(1)}
+FieldPoint571 = FieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1)}
 
 function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a.value==b.value
@@ -65,6 +84,49 @@ function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
         if getbit(a.value,i)==1
             c = shiftedxor(c, b, i)
         end
+    end
+
+    return reduce(FieldPoint{D,R}(c))
+end
+
+#still uses shift and add
+#but performs reduction itself, rather than calling a reduce function
+function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+    if a.value==b.value return square(a) end
+
+    c = zero(typeof(a.value))
+    b = b.value
+    r = StaticUInt{2,UInt64}(R)
+
+    for i in 0:(D-1)
+        if getbit(a.value,i)==1
+            c ⊻= b
+        end
+        b <<= 1
+        if getbit(b, D)==1
+            flipbit!(b, D)
+            b ⊻= r
+        end
+    end
+
+    return FieldPoint{D,R}(c)
+end
+
+#supposedly faster, but not :(
+#Guide to ECC, Algorithm 2.34, right to left comb method
+function comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+    if a.value==b.value return square(a) end
+
+    c = zero(StaticUInt{length(a.value)*2,UInt64})
+    b = changelength(b.value, 2*length(b.value))
+
+    for k in 0:63
+        for j in 1:length(a.value)
+            if getbit(a.value, (j-1)*64 + k)==1
+                c = shiftedxor(c, b, (j-1)*64)
+            end
+        end
+        if k!=63 b <<= 1 end
     end
 
     return reduce(FieldPoint{D,R}(c))
@@ -149,14 +211,3 @@ end
 function convert(::Type{BigInt}, a::FieldPoint)
     return convert(BigInt, a.value)
 end
-
-#sec2 v2 (and v1), table 3:
-FieldPoint113 = FieldPoint{113, Int128(512+1)} #v1 only
-FieldPoint131 = FieldPoint{131, Int128(256+8+4+1)} #v1 only
-FieldPoint163 = FieldPoint{163, Int128(128+64+8+1)}
-FieldPoint193 = FieldPoint{193, (Int128(1)<<15) + Int128(1)} #v1 only
-FieldPoint233 = FieldPoint{233, (Int128(1)<<74) + Int128(1)}
-FieldPoint239 = FieldPoint{239, (Int128(1)<<36) + Int128(1)}
-FieldPoint283 = FieldPoint{283, (Int128(1)<<12) + Int128(128+32+1)}
-FieldPoint409 = FieldPoint{409, (Int128(1)<<87) + Int128(1)}
-FieldPoint571 = FieldPoint{571, (Int128(1)<<10) + Int128(32+4+1)}

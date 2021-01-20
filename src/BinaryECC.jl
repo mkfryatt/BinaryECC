@@ -11,6 +11,7 @@ using StaticArrays: MVector
 
 include("StaticUInt.jl")
 include("Field_StaticUInt.jl")
+include("Field_fastreduce.jl")
 #include("Field_BigInt.jl")
 include("EC.jl")
 include("ECAffine.jl")
@@ -33,10 +34,12 @@ export
     ECMismatchException,
     ECKeyPair,
     ECDSASignature,
+    StaticUInt,
 
     +,
     -,
     *,
+    montmul,
     /,
     inv,
     ^,
@@ -50,6 +53,8 @@ export
     zero,
     one,
     random,
+    comb_mult,
+    mult_own_reduce,
 
     generate_keypair,
     ecdsa_sign,
