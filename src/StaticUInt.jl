@@ -5,6 +5,7 @@ struct StaticUInt{L,T<:Unsigned}
     StaticUInt{L,T}(value::MVector{L,T}) where {L,T} = new(value)
 end
 
+#create a staticuint from an integer
 function StaticUInt{L,T}(value::Integer) where {L,T}
     if value<0
         throw(ArgumentError("Expected a nonnegative value."))
@@ -20,7 +21,7 @@ function StaticUInt{L,T}(value::Integer) where {L,T}
 end
 
 #sec1v2 2.3.6
-#convert a hex string to a field element
+#create a staticuint from a hex string
 function StaticUInt{L,T}(s::String) where {L,T}
     value = zeros(MVector{L,T})
     blocksize = sizeof(T)*2
@@ -31,6 +32,7 @@ function StaticUInt{L,T}(s::String) where {L,T}
     return StaticUInt{L,T}(value)
 end
 
+#deep copy of a staticuint
 function copy(x::StaticUInt{L,T}) where {L,T}
     return StaticUInt{L,T}(copy(x.value))
 end
@@ -61,6 +63,7 @@ function zero(::Type{StaticUInt{L,T}}) where {L,T}
     return StaticUInt{L,T}(zeros(MVector{L,T}))
 end
 
+#returns the bit (as a 0 or 1 of type T) in position i of the number stored in x
 function getbit(x::StaticUInt{L,T}, i::Integer) where {L,T}
     blocksize = sizeof(T)*8
     bit = i%blocksize
@@ -69,6 +72,7 @@ function getbit(x::StaticUInt{L,T}, i::Integer) where {L,T}
     return x.value[block]>>bit & 1
 end
 
+#updates x to have the bit at positon i flipped
 function flipbit!(x::StaticUInt{L,T}, i::Integer) where {L,T}
     blocksize = sizeof(T)*8
     bit = i%blocksize
@@ -79,7 +83,7 @@ function flipbit!(x::StaticUInt{L,T}, i::Integer) where {L,T}
     x.value[block] ⊻= T(1)<<bit
 end
 
-#length of a number in bits
+#length in bits of the number stored in x
 function bits(x::StaticUInt{L,T}) where {L,T}
     block = L
     while x.value[block]==0
@@ -89,6 +93,7 @@ function bits(x::StaticUInt{L,T}) where {L,T}
     return sizeof(T)*8*block - leading_zeros(x.value[block])
 end
 
+#returns true if the numbers stored in x and y are the same
 function ==(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
     if L1<L2
         x, y = y, x
@@ -106,6 +111,7 @@ function ==(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
     return true
 end
 
+#returns the result of x xor y, in a staticuint{L,T}, where L = max(L1,L2)
 function ⊻(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
     if L1<L2
         x, y = y, x
@@ -117,6 +123,7 @@ function ⊻(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
     return StaticUInt{L1,T}(value)
 end
 
+#returns the result of x shifted left by "shift" bits
 function <<(x::StaticUInt{L,T}, shift::Integer) where {L,T}
     if shift<0 x>>(-shift)
     elseif shift==0 return x
@@ -132,14 +139,16 @@ function <<(x::StaticUInt{L,T}, shift::Integer) where {L,T}
     value = zeros(MVector{L,T})
     value[L] = (x.value[L-blockshift]&lowermask)<<upperbits
     for block in 1:(L-blockshift-1)
-        value[block+blockshift] += (x.value[block]&lowermask)<<upperbits
-        value[block+blockshift+1] += (x.value[block]>>lowerbits)&uppermask
+        value[block+blockshift] ⊻= (x.value[block]&lowermask)<<upperbits
+        value[block+blockshift+1] ⊻= (x.value[block]>>lowerbits)&uppermask
     end
 
     return StaticUInt{L,T}(value)
 end
 
-#returns x ⊻ (y<<shift)
+#returns x ⊻ (y<<shift) in a staticuint{L1,T}
+#not guaranteed to produce the same result as doing the shift and xor separately
+#(due to overflow of behaviour of y when shifted left)
 function shiftedxor(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Integer) where {L1,L2,T}
     if shift<0 throw(ArgumentError("Cannot shift by a negative amount"))
     elseif shift==0 return x ⊻ y
@@ -147,12 +156,22 @@ function shiftedxor(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Integer) wh
 
     blocksize = 8*sizeof(T)
     blockshift = shift ÷ blocksize
+    value = copy(x.value)
+
+    #if the shift is a whole number of blocks, the calculation is much simpler
+    if shift%blocksize==0
+        for i in 1:min(L1-blockshift, L2)
+            value[i+blockshift] ⊻= y.value[i]
+        end
+        return StaticUInt{L1,T}(value)
+    end
+
+    #otherwise, each new block requires bits from two shifted blocks
     upperbits = shift % blocksize
     lowerbits = blocksize - upperbits
     lowermask = (T(1)<<lowerbits)-1
     uppermask = (T(1)<<upperbits)-1
 
-    value = copy(x.value)
     top = L2
     if L2+blockshift==L1
         top = L2-1
@@ -168,6 +187,7 @@ function shiftedxor(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Integer) wh
     return StaticUInt{L1,T}(value)
 end
 
+#returns the result of right shifting the number stored in x by "shift" bits
 function >>(x::StaticUInt{L,T}, shift::Integer) where {L,T}
     if shift<0 x<<(-shift)
     elseif shift==0 return x
@@ -183,22 +203,26 @@ function >>(x::StaticUInt{L,T}, shift::Integer) where {L,T}
     value = zeros(MVector{L,T})
     value[1] = (x.value[1+blockshift]>>lowerbits)&uppermask
     for block in (2+blockshift):L
-        value[block-blockshift] += (x.value[block]>>lowerbits)&uppermask
-        value[block-blockshift-1] += (x.value[block]&lowermask)<<upperbits
+        value[block-blockshift] ⊻= (x.value[block]>>lowerbits)&uppermask
+        value[block-blockshift-1] ⊻= (x.value[block]&lowermask)<<upperbits
     end
     return StaticUInt{L,T}(value)
 end
 
+#returns the length of x in words
 function length(x::StaticUInt{L,T}) where {L,T}
     return L
 end
 
+#returns a new staticuint that has "newL" words
+#if newL>L, the extra words are zeros
+#if newL<L, it simply chops off the superfluous words
 function changelength(x::StaticUInt{L,T}, newL::Integer) where {L,T}
     if newL<1
         throw(ArgumentError("New length must be positive"))
     end
     if L==newL
-        return x
+        return copy(x)
     end
     value = zeros(MVector{newL,T})
     for i in 1:min(L,newL)
@@ -208,6 +232,7 @@ function changelength(x::StaticUInt{L,T}, newL::Integer) where {L,T}
 end
 
 #sec1 v2, 2.3.9
+#returns the number stored in a, as a BigInt
 function convert(::Type{BigInt}, a::StaticUInt{L,T}) where {L,T}
     b = BigInt(0)
     for i in 1:L
@@ -217,6 +242,7 @@ function convert(::Type{BigInt}, a::StaticUInt{L,T}) where {L,T}
 end
 
 #sec1 v2, 2.3.5
+#returns the number stored in a as a hex string
 function convert(::Type{String}, a::StaticUInt{L,T}) where {L,T}
     M = ""
     for block in a.value
@@ -227,10 +253,23 @@ function convert(::Type{String}, a::StaticUInt{L,T}) where {L,T}
     return M
 end
 
+#returns a random number of the given type
 function random(::Type{StaticUInt{L,T}}) where {L,T}
     value = zeros(MVector{L,T})
     for i in 1:L
         value[i] = rand(T)
     end
+    return StaticUInt{L,T}(value)
+end
+
+#retuns a random number of the given type, no longer than "bits" bits long
+function random(::Type{StaticUInt{L,T}}, bits) where {L,T}
+    value = zeros(MVector{L,T})
+    blocksize = sizeof(T)*8
+    zerowords = bits ÷ blocksize
+    for i in 1:(L-zerowords)
+        value[i] = rand(T)
+    end
+    value[L-zerowords] &= (T(1)<<(bits%blocksize)) -1
     return StaticUInt{L,T}(value)
 end
