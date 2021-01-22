@@ -54,7 +54,7 @@ export
     one,
     random,
     comb_mult,
-    mult_own_reduce,
+    noreduce_mult,
 
     generate_keypair,
     ecdsa_sign,

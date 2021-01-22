@@ -266,7 +266,7 @@ end
 function random(::Type{StaticUInt{L,T}}, bits) where {L,T}
     value = zeros(MVector{L,T})
     blocksize = sizeof(T)*8
-    zerowords = bits ÷ blocksize
+    zerowords = L - ceil(Int, bits / blocksize)
     for i in 1:(L-zerowords)
         value[i] = rand(T)
     end
