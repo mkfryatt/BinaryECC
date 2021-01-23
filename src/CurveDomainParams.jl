@@ -146,7 +146,7 @@ const SECT233K1 = CurveDomainParams(
             FieldPoint233(1)
         )
     ),
-    parse(BigInt, "80 00000000 00000000 00000000 00069D5B B915BCD4 6EFB1AD5", base=16),
+    parse(BigInt, "80 00000000 00000000 00000000 00069D5B B915BCD4 6EFB1AD5 F173ABDF", base=16),
     4
 )
 
@@ -170,7 +170,7 @@ const SECT283K1 = CurveDomainParams(
             FieldPoint283(1)
         )
     ),
-    parse(BigInt, "01FFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFE9AE 2ED07577 265DFF7F", base=16),
+    parse(BigInt, "01FFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFE9AE 2ED07577 265DFF7F 94451E06 1E163C61", base=16),
     4
 )
 
