@@ -56,11 +56,11 @@ function *(n::Integer, p::AbstractECPoint)
 end
 
 """
-    montmul(p::AbstractECPoint, n::Integer)
+    mont_pow_ladder(p::AbstractECPoint, n::Integer)
 Performs ``p \\cdot n`` with a fixed sequence of curve and field operations.
-More resistant to timing attacks than the standard "double and add" algorithm.
+More resistant to timing attacks than the standard double and add algorithm.
 """
-function montmul(p::AbstractECPoint, n::Integer)
+function mont_pow_ladder(p::AbstractECPoint, n::Integer)
     R0 = p
     R1 = double(p)
     for i in (bits(n)-2):-1:0
@@ -76,11 +76,14 @@ end
 
 #number of bits in the binary representation of this number
 function bits(a::T) where T<:Integer
+    return sizeof(T)*8 - leading_zeros(a)
+end
+function bits(a::BigInt)
     i = 0
-    while a > (T(1)<<i)
+    while a > (BigInt(1)<<i)
         i += 1
     end
-    if a == (T(1)<<i)
+    if a == (BigInt(1)<<i)
         return i+1
     else
         return i

@@ -133,6 +133,65 @@ function *(p::ECPointAffine, n::Integer) where {D,R}
 end
 
 """
+    mont_pow_ladder(p::ECPointAffine{D,R}, n::Integer) where {D,R}
+Returns ``p \\cdot n``.
+
+More resistant to timing attacks than the standard double and add algorithm.
+
+Fast Multiplication on Elliptic Curves over ``GF(2^m)`` without Precomputation,
+Algorithm 2A: Montgomery Scalar Multiplication.
+"""
+function mont_pow_ladder(p::ECPointAffine{D,R}, n::T) where {D,R} where T<:Integer
+    if n==0 || iszero(p) return p end
+    if n<0 return mont_pow_ladder(-p, -n) end
+
+    b = p.ec.b
+    x = p.x
+
+    x1 = x
+    x2 = x^2
+    x2 += b/x2
+    v1, v2 = T(1), T(2)
+    for i in (bits(n)-2):-1:0
+        if x1==x2
+            #ie p1==-p2
+            if i==0
+                return ECPointAffine(p.ec)
+            else
+                #think of a better way to recover here
+                #because this repeats a lot of the arithmetic that has already been done
+                return find_point(x1, x2, p) + mont_pow_ladder(p, n-v1)
+            end
+        end
+        t = x1 / (x1+x2)
+        if (n>>>i)&1==1
+            x1 = x + t^2 + t
+            x2 = x2^2
+            x2 += b/x2
+            v1, v2 = v1+v2, 2*v2
+
+        else
+            x1 = x1^2
+            x1 += b/x1
+            x2 = x + t^2 + t
+            v1, v2 = 2*v1, v1+v2
+        end
+    end
+    return find_point(x1, x2, p)
+end
+
+#needed for montgomery's powering ladder
+#finds y1 given that (x1, y1) + p == (x2, y2)
+function find_point(x1::FieldPoint{D,R}, x2::FieldPoint{D,R}, p::ECPointAffine{D,R}) where {D,R}
+    r1 = x1+p.x
+    r2 = x2+p.x
+    y1 = r1*r2 + p.x^2 + p.y
+    y1 *= r1/p.x
+    y1 += p.y
+    return ECPointAffine{D,R}(x1, y1, p.ec)
+end
+
+"""
     isvalid(p::ECPointAffine)
 Returns true if ``p`` is a point on the elliptic curve that it is associated with.
 """
