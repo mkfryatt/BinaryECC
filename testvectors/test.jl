@@ -14,6 +14,8 @@ function testcurve(curve::String)
             println(" is correct.")
         else
             println(" is incorrect.")
+            return false
         end
     end
+    return true
 end
