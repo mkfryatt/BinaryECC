@@ -1,96 +1,94 @@
-import Base: +, -, *, /, ^, ==, repr, inv, sqrt, iszero, convert
-
-struct FieldMismatchException <: Exception end
-
-struct Field
-    degree::Int16 #the degree of the reduction polynomial
-    reduction::BigInt #the reduction polynomial
-    Field(d::Integer, r::Integer) = new(convert(Int16, d), convert(BigInt, r))
-end
-
-function ==(a::Field, b::Field)
-    return a.degree==b.degree && a.reduction==b.reduction
-end
-
-struct FieldPoint
+#D is the degree of the reduction polynomial
+#R is the reduction polynomial without the x^D term
+struct FieldPoint{D,R}
     value::BigInt
-    field::Field
-    FieldPoint(x::Integer, field::Field) = reduce(new(convert(BigInt, x), field))
+    FieldPoint{D,R}(value::Integer) where {D,R} = new(convert(BigInt, value))
 end
 
 #sec1v2 2.3.6
 #convert a hex string to a field element
-function FieldPoint(s::String, f::Field)
+function FieldPoint{D,R}(s::String) where {D,R}
     s = replace(s, " " => "")
-    if length(s)!=ceil(f.degree / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
+    if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
     value = parse(BigInt, s, base=16)
-    return FieldPoint(value, f)
+    return FieldPoint{D,R}(value)
 end
 
 function repr(a::FieldPoint)
-    return repr(a)
+    return repr(a.value)
 end
 
-function ==(a::FieldPoint, b::FieldPoint)
-    return a.value==b.value && a.field==b.field
+function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+    return a.value==b.value
 end
 
-function +(a::FieldPoint, b::FieldPoint)
-    if a.field!=b.field throw(FieldMismatchException()) end
-    return FieldPoint(a.value ⊻ b.value, a.field)
+function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+    return FieldPoint{D,R}(a.value ⊻ b.value)
 end
 
-function -(a::FieldPoint, b::FieldPoint)
+function -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a+b
 end
 
-function -(a::FieldPoint)
+function -(a::FieldPoint{D,R}) where {D,R}
     return a
 end
 
-function reduce(a::FieldPoint)
-    if a.value<(BigInt(1)<<a.field.degree) return a end
+function reduce(a::FieldPoint{D,R}) where {D,R}
+    if a.value<(BigInt(1)<<D) return a end
 
     #k is the number of bits of a that need to be removed from a
-    k = bits(a.value) - a.field.degree
+    k = bits(a.value) - D
 
     #shift the reduction polynomial left
     #the loop will slowly shift it back down again
-    t = a.field.reduction << k
+    t = BigInt(R) << k
 
-    #b will eventually be such that a ≡ b (mod reduction polynomial)
+    #b will eventually be such that a ≡ b (mod R)
     b = a.value
 
-    #left to right, get rid of the extra bits of b
-    for i in (k+a.field.degree):-1:a.field.degree
-        if b & (BigInt(1)<<i) != BigInt(0)
+    for i in (k+D):-1:D
+        if b & (BigInt(1) << i) != BigInt(0)
             b ⊻= t + (BigInt(1)<<i)
         end
         t >>>= 1
     end
 
-    return FieldPoint(b, a.field)
+    return FieldPoint{D,R}(b)
 end
 
 #right to left, shift and add
-function *(a::FieldPoint, b::FieldPoint)
-    if a.field!=b.field throw(FieldMismatchException()) end
+function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     if a.value==b.value return square(a) end
 
     c = BigInt(0)
     shiftedb = b.value
 
-    for i in 0:(a.field.degree-1)
+    for i in 0:(D-1)
         if a.value & (BigInt(1)<<i) != BigInt(0)
             c ⊻= shiftedb
         end
         shiftedb <<= 1
     end
 
-    return reduce(FieldPoint(c, a.field))
+    return reduce(FieldPoint{D,R}(c))
 end
 
-#number of bits in the binary representation of this number
+#add a zero between every digit of the original
+function square(a::FieldPoint{D,R}) where {D,R}
+    b = BigInt(0)
+    counter = BigInt(1)
+    for i in 0:(D-1)
+        if a.value & counter != BigInt(0)
+            b += BigInt(1) << (i*2)
+        end
+        counter <<= 1
+    end
+
+    return reduce(FieldPoint{D,R}(b))
+end
+
+#length of a number in bits
 function bits(a::Integer)
     i = 0
     while a > (BigInt(1)<<i)
@@ -105,11 +103,11 @@ end
 
 #uses a version of egcd to invert a
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography
-function inv(a::FieldPoint)
+function inv(a::FieldPoint{D,R}) where {D,R}
     if a.value==0 throw(DivideError()) end
 
     u = a.value
-    v = a.field.reduction + (BigInt(1)<<a.field.degree)
+    v = BigInt(R) + (BigInt(1)<<D)
     g1 = BigInt(1)
     g2 = BigInt(0)
 
@@ -123,52 +121,36 @@ function inv(a::FieldPoint)
         u ⊻= v << j
         g1 ⊻= g2 << j
     end
-    return reduce(FieldPoint(g1, a.field)) #TODO is this reduce needed?
+    return FieldPoint{D,R}(g1)
 end
 
-function /(a::FieldPoint, b::FieldPoint)
-    if a.field!=b.field throw(FieldMismatchException()) end
+function /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return a * inv(b)
 end
 
-#add a zero between every digit of the original
-function square(a::FieldPoint)
-    b = BigInt(0)
-    counter = BigInt(1)
-    for i in 0:(a.field.degree-1)
-        if a.value & counter != BigInt(0)
-            b += BigInt(1) << (i*2)
-        end
-        counter <<= 1
-    end
-
-    return reduce(FieldPoint(b, a.field))
-end
-
 #right to left, square and multiply method
-function ^(a::FieldPoint, b::Integer)
-    c = FieldPoint(1, a.field)
+function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
+    c = FieldPoint{D,R}(1)
     squaring = a
 
     while b>BigInt(0)
         if b & BigInt(1) == BigInt(1)
             c *= squaring
         end
-        squaring = square(squaring)
+        squaring *= squaring
         b >>>= 1
     end
 
     return c
 end
 
-function sqrt(a::FieldPoint)
-    return a^(BigInt(1)<<(a.field.degree-1))
+function sqrt(a::FieldPoint{D,R}) where {D,R}
+    return a^(BigInt(1)<<(D-1))
 end
 
-#return a random element of the specified field
-function random(f::Field)
-    range = BigInt(0):((BigInt(1)<<f.degree)-BigInt(1))
-    return FieldPoint(rand(range), f)
+function random(::Type{FieldPoint{D,R}}) where {D,R}
+    range = BigInt(0):((BigInt(1)<<D)-BigInt(1))
+    return FieldPoint{D,R}(rand(range))
 end
 
 function iszero(a::FieldPoint)
@@ -181,13 +163,12 @@ function convert(::Type{BigInt}, a::FieldPoint)
 end
 
 #sec2 v2 (and v1), table 3:
-const FIELD113 = Field(113, BigInt(512+1)) #v1 only
-const FIELD131 = Field(131, BigInt(256+8+4+1)) #v1 only
-const FIELD163 = Field(163, BigInt(128+64+8+1))
-const FIELD193 = Field(193, (BigInt(1)<<15) + BigInt(1)) #v1 only
-const FIELD233 = Field(233, (BigInt(1)<<74) + BigInt(1))
-const FIELD239A = Field(239, (BigInt(1)<<36) + BigInt(1))
-const FIELD239B = Field(239, (BigInt(1)<<158) + BigInt(1))
-const FIELD283 = Field(283, (BigInt(1)<<12) + BigInt(128+32+1))
-const FIELD409 = Field(409, (BigInt(1)<<87) + BigInt(1))
-const FIELD571 = Field(571, (BigInt(1)<<10) + BigInt(32+4+1))
+FieldPoint113 = FieldPoint{113, Int128(512+1)} #v1 only
+FieldPoint131 = FieldPoint{131, Int128(256+8+4+1)} #v1 only
+FieldPoint163 = FieldPoint{163, Int128(128+64+8+1)}
+FieldPoint193 = FieldPoint{193, (Int128(1)<<15) + Int128(1)} #v1 only
+FieldPoint233 = FieldPoint{233, (Int128(1)<<74) + Int128(1)}
+FieldPoint239 = FieldPoint{239, (Int128(1)<<36) + Int128(1)}
+FieldPoint283 = FieldPoint{283, (Int128(1)<<12) + Int128(128+32+1)}
+FieldPoint409 = FieldPoint{409, (Int128(1)<<87) + Int128(1)}
+FieldPoint571 = FieldPoint{571, (Int128(1)<<10) + Int128(32+4+1)}
