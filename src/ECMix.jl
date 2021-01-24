@@ -4,61 +4,61 @@ function convert(::Type{ECPointAffine{D,R}}, p::ECPointProjective{D,R}) where {D
     return ECPointAffine{D,R}(p.x*z_inv, p.y*z_inv, p.ec)
 end
 
-function convert(::Type{ECPointAffine{D,R}}, p::ECPointJacobian{D,R}) where {D,R}
+function convert(::Type{ECPointAffine}, p::ECPointJacobian{D,R}) where {D,R}
     if iszero(p) return ECPointAffine{D,R}(ec) end
     z_inv = inv(p.z)
     return ECPointAffine{D,R}(p.x*z_inv^2, p.y*z_inv^3, p.ec)
 end
 
-function convert(::Type{ECPointAffine{D,R}}, p::ECPointLD{D,R}) where {D,R}
+function convert(::Type{ECPointAffine}, p::ECPointLD{D,R}) where {D,R}
     if iszero(p) return ECPointAffine{D,R}(ec) end
     z_inv = inv(p.z)
     return ECPointAffine{D,R}(p.x*z_inv, p.y*z_inv^2, p.ec)
 end
 
-function convert(::Type{ECPointProjective{D,R}}, p::ECPointAffine{D,R}) where {D,R}
+function convert(::Type{ECPointProjective}, p::ECPointAffine{D,R}) where {D,R}
     if iszero(p) return ECPointProjective{D,R}(ec) end
     return ECPointProjective{D,R}(p.x, p.y, FieldPoint{D,R}(1), p.ec)
 end
 
-function convert(::Type{ECPointProjective{D,R}}, p::ECPointJacobian{D,R}) where {D,R}
+function convert(::Type{ECPointProjective}, p::ECPointJacobian{D,R}) where {D,R}
     if iszero(p) return ECPointProjective{D,R}(ec) end
     z_inv = inv(p.z)
     return ECPointProjective{D,R}(p.x*z_inv, p.y*(z_inv^2), p.z, p.ec)
 end
 
-function convert(::Type{ECPointProjective{D,R}}, p::ECPointLD{D,R}) where {D,R}
+function convert(::Type{ECPointProjective}, p::ECPointLD{D,R}) where {D,R}
     if iszero(p) return ECPointProjective{D,R}(ec) end
     return ECPointProjective{D,R}(p.x, p.y / p.z, p.z, p.ec)
 end
 
-function convert(::Type{ECPointJacobian{D,R}}, p::ECPointAffine{D,R}) where {D,R}
+function convert(::Type{ECPointJacobian}, p::ECPointAffine{D,R}) where {D,R}
     if iszero(p) return ECPointJacobian{D,R}(ec) end
     return ECPointJacobian{D,R}(p.x, p.y, FieldPoint{D,R}(1), p.ec)
 end
 
-function convert(::Type{ECPointJacobian{D,R}}, p::ECPointProjective{D,R}) where {D,R}
+function convert(::Type{ECPointJacobian}, p::ECPointProjective{D,R}) where {D,R}
     if iszero(p) return ECPointJacobian{D,R}(ec) end
     z2 = p.z^2
     return ECPointJacobian{D,R}(p.x*z2, p.y*z2*p.z, p.z, p.ec)
 end
 
-function convert(::Type{ECPointJacobian{D,R}}, p::ECPointLD{D,R}) where {D,R}
+function convert(::Type{ECPointJacobian}, p::ECPointLD{D,R}) where {D,R}
     if iszero(p) return ECPointJacobian{D,R}(ec) end
     return ECPointJacobian{D,R}(p.x*p.z, p.y*p.z, p.z, p.ec)
 end
 
-function convert(::Type{ECPointLD{D,R}}, p::ECPointAffine{D,R}) where {D,R}
+function convert(::Type{ECPointLD}, p::ECPointAffine{D,R}) where {D,R}
     if iszero(p) return ECPointLD{D,R}(ec) end
     return ECPointLD{D,R}(p.x, p.y, FieldPoint{D,R}(1), p.ec)
 end
 
-function convert(::Type{ECPointLD{D,R}}, p::ECPointProjective{D,R}) where {D,R}
+function convert(::Type{ECPointLD}, p::ECPointProjective{D,R}) where {D,R}
     if iszero(p) return ECPointLD{D,R}(ec) end
     return ECPointLD{D,R}(p.x, p.y*p.z, p.z, p.ec)
 end
 
-function convert(::Type{ECPointLD{D,R}}, p::ECPointJacobian{D,R}) where {D,R}
+function convert(::Type{ECPointLD}, p::ECPointJacobian{D,R}) where {D,R}
     if iszero(p) return ECPointLD{D,R}(ec) end
     z_inv = inv(p.z)
     return ECPointLD{D,R}(p.x*z_inv, p.y*z_inv, p.z, p.ec)

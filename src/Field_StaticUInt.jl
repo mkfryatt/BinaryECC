@@ -219,8 +219,8 @@ function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
     c = one(typeof(a))
     squaring = a
 
-    while b>BigInt(0)
-        if b & BigInt(1) == BigInt(1)
+    while b>0
+        if b & 1 == 1
             c *= squaring
         end
         squaring *= squaring

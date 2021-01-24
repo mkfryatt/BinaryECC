@@ -14,7 +14,7 @@ abstract type AbstractECPoint end
 
 """
     EC{D,R}
-Represents an elliptic curve over the
+Represents a non-supersingular elliptic curve over the
 field given by D and R.
 
 Contains fields ``a`` and ``b``, where:
@@ -28,7 +28,8 @@ end
 
 """
     repr(ec::EC)
-Returns a string representation of an elliptic curve equation, "``y^2 + xy = x^3 + ax^2 + b``".
+Returns a string representation of an elliptic curve equation,
+ "``y^2 + xy = x^3 + ax^2 + b``".
 """
 function repr(ec::EC)
     return "E: y² + xy = x³ + "*repr(ec.a.value)*"x² + "*repr(ec.b.value)
