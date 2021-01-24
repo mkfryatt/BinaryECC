@@ -4,18 +4,14 @@ import Base:
     +, -, *, /, ^, ==, ⊻, >>, <<,
     repr, inv, isvalid,
     iszero, isone, zero, one,
-    convert, length, copy
+    convert, length, copy, sqrt
 
 using SHA: sha256
 using StaticArrays: MVector
 
-#either include these:
 include("StaticUInt.jl")
 include("Field_StaticUInt.jl")
 include("Field_fastreduce.jl")
-#or this:
-#include("Field_BigInt.jl")
-
 include("EC.jl")
 include("ECAffine.jl")
 include("ECLD.jl")
@@ -43,11 +39,11 @@ export
     -,
     *,
     mont_pow_ladder,
-    montmul,
     /,
     inv,
     ^,
     ==,
+    sqrt,
 
     repr,
     convert,
@@ -59,6 +55,7 @@ export
     random,
     comb_mult,
     noreduce_mult,
+    threads_mult,
 
     generate_keypair,
     ecdsa_sign,

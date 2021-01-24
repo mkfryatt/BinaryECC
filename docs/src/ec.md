@@ -36,7 +36,7 @@ repr(ec::EC)
 
 *(p::ECPointAffine, n::Integer) where {D,R}
 
-montmul
+mont_pow_ladder
 
 iszero(p::ECPointAffine)
 ```

@@ -115,6 +115,31 @@ function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
     return reduce(FieldPoint{D,R}(c))
 end
 
+function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+    if a.value==b.value return square(a) end
+
+    cs = []
+
+    for i in 1:Threads.nthreads()
+        append!(cs, [zero(StaticUInt{length(a.value)*2,UInt64})])
+    end
+    
+    b = changelength(b.value, 2*length(a.value))
+
+    Threads.@threads for i in 0:(D-1)
+        if getbit(a.value,i)==1
+            t = Threads.threadid()
+            cs[t] = shiftedxor(cs[t], b, i)
+        end
+    end
+
+    for i in 2:Threads.nthreads()
+        cs[1] ⊻= cs[i]
+    end
+
+    return reduce(FieldPoint{D,R}(cs[1]))
+end
+
 #still uses shift and add
 #but performs reduction itself, rather than calling a reduce function
 function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
@@ -269,6 +294,18 @@ Returns element 1 of the specified field.
 """
 function one(::Type{FieldPoint{D,R}}) where {D,R}
     return FieldPoint{D,R}(one(StaticUInt{ceil(Int,D/64),UInt64}))
+end
+
+"""
+    sqrt(a::FieldPoint{D,R}) where {D,R}
+Returns ``b`` such that ``b^2 ≡ a \\pmod(R)``.
+"""
+function sqrt(a::FieldPoint{D,R}) where {D,R}
+    #a^{2^{D-1}}
+    for i in 1:(D-1)
+        a *= a
+    end
+    return a
 end
 
 """

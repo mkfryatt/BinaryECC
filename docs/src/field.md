@@ -25,6 +25,8 @@ inv(a::FieldPoint{D,R}) where {D,R}
 
 ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
 
+sqrt(a::FieldPoint{D,R}) where {D,R}
+
 iszero(a::FieldPoint)
 
 zero(::Type{FieldPoint{D,R}}) where {D,R}
