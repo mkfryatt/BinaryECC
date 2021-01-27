@@ -1,0 +1,7 @@
+name = "BinaryECC"
+uuid = "4db8fc29-f2c5-4524-8fec-49c6f67ce4b0"
+version = "0.1.0"
+
+[deps]
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
