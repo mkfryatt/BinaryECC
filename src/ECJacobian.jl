@@ -18,7 +18,7 @@ struct ECPointJacobian{D,R} <: AbstractECPoint
     ECPointJacobian{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
         new(x, y, z, ec)
 
-    ECPointJacobian{D,R}(ec::EC{D,R}) where {D,R} =
+    zero(::Type{ECPointJacobian{D,R}}, ec::EC{D,R}) where {D,R} =
         new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 

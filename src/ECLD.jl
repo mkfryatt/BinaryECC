@@ -18,7 +18,7 @@ struct ECPointLD{D,R} <: AbstractECPoint
     ECPointLD{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
         new(x, y, z, ec)
 
-    ECPointLD{D,R}(ec::EC{D,R}) where {D,R} =
+    zero(::Type{ECPointLD{D,R}}, ec::EC{D,R}) where {D,R} =
         new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 

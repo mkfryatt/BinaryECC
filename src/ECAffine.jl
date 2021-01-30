@@ -12,14 +12,6 @@ struct ECPointAffine{D,R} <: AbstractECPoint
 end
 
 """
-    ECPointAffine(ec::EC{D,R}) where {D,R}
-Returns an object representing the point at infinity on the given curve.
-"""
-function ECPointAffine(ec::EC{D,R}) where {D,R}
-    return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
-end
-
-"""
     ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
 Convert a hex string to a point on the given elliptic curve
 using the procedure in SEC 2 (version 2), section 2.3.4.
@@ -73,7 +65,7 @@ function +(p1::ECPointAffine{D,R}, p2::ECPointAffine{D,R}) where {D,R}
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
-    if p1==-p2 return ECPointAffine(p1.ec) end
+    if p1==-p2 return zero(ECPointAffine{D,R}, p1.ec) end
     if p1==p2 return double(p1) end
 
     #Adds: 8
@@ -98,7 +90,7 @@ end
 
 function double(p::ECPointAffine{D,R}) where {D,R}
     if iszero(p) return p end
-    if p==-p return ECPointAffine(p.ec) end
+    if p==-p return zero(ECPointAffine{D,R}, p.ec) end
 
     #Adds: 5
     #Mults: 2
@@ -111,16 +103,16 @@ function double(p::ECPointAffine{D,R}) where {D,R}
 end
 
 """
-    *(p::ECPointAffine, n::Integer) where {D,R}
+    *(p::ECPointAffine{D,R}, n::Integer) where {D,R}
 Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
 """
-function *(p::ECPointAffine, n::Integer) where {D,R}
+function *(p::ECPointAffine{D,R}, n::Integer) where {D,R}
     if n<0 return (-p)*(-n) end
     if iszero(p) return p end
-    if n==0 return ECPointAffine(p.ec) end
+    if n==0 return zero(ECPointAffine{D,R}, p.ec) end
     if n==1 return p end
 
-    result = ECPointAffine(p.ec)
+    result = zero(ECPointAffine{D,R}, p.ec)
     doubling = p
     while n>0
         if n&1==1
@@ -156,7 +148,7 @@ function mont_pow_ladder(p::ECPointAffine{D,R}, n::T) where {D,R} where T<:Integ
         if x1==x2
             #ie p1==-p2
             if i==0
-                return ECPointAffine(p.ec)
+                return zero(ECPointAffine{D,R}, p.ec)
             else
                 #think of a better way to recover here
                 #because this repeats a lot of the arithmetic that has already been done
@@ -191,6 +183,21 @@ function find_point(x1::FieldPoint{D,R}, x2::FieldPoint{D,R}, p::ECPointAffine{D
     return ECPointAffine{D,R}(x1, y1, p.ec)
 end
 
+#Guide to ECC, algorithm 3.31
+function naf_mult(P::ECPointAffine{D,R}, n::Integer) where {D,R}
+    (adds, subs, l) = naf(n)
+    Q = zero(ECPointAffine{D,R}, P.ec)
+    for i in (l-1):-1:0
+        Q = double(Q)
+        if (adds>>i)&1==1
+            Q += P
+        elseif (subs>>i)&1==1
+            Q -= P
+        end
+    end
+    return Q
+end
+
 """
     isvalid(p::ECPointAffine)
 Returns true if ``p`` is a point on the elliptic curve that it is associated with.
@@ -205,4 +212,12 @@ Returns true if ``p = \\mathcal{O}``, i.e it is the point at infinity.
 """
 function iszero(p::ECPointAffine)
     return iszero(p.x) && iszero(p.y)
+end
+
+"""
+    zero(::Type{ECPointAffine{D,R}}, ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function zero(::Type{ECPointAffine{D,R}}, ec::EC{D,R}) where {D,R}
+    return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end

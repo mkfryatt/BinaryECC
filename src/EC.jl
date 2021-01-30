@@ -90,3 +90,24 @@ function bits(a::BigInt)
         return i
     end
 end
+
+#Guide to ECC, algorithm 3.30
+#computes the non adjacent form of a positive integer
+function naf(k::T) where T<:Integer
+    i = 0
+    adds = T(0)
+    subs = T(0)
+    while k>=1
+        if k%2==1
+            ki = 2 - (k%4)
+            k -= ki
+            if ki==1 adds ⊻= T(1)<<i
+            else subs ⊻= T(1)<<i
+            end
+        end
+        k = k ÷ 2
+        i += 1
+    end
+
+    return (adds, subs, i)
+end
