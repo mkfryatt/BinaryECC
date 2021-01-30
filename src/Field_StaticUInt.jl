@@ -208,7 +208,6 @@ end
 
 #Guide to ECC, Algorithm 2.36, left to right comb method with windowing
 function window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
-
     wordsize = 64
     L = ceil(Int,D/wordsize)
     Bu::Array{StaticUInt{L+1,UInt64},1} = [small_mult(b, u) for u=0:(1<<window -1)]
@@ -242,9 +241,12 @@ function small_mult(a::FieldPoint{D,R}, b::Int)::StaticUInt where {D,R}
     return c
 end
 
-#squares the given number, slightly faster than using the standard * algorithm
-#adds a zero between every digit of the original
 function square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
+    return window_square(a, 4)
+end
+
+#adds a zero between every digit of the original
+function standard_square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     b = zero(StaticUInt{ceil(Int,D/32),UInt64})
     for i in 0:(D-1)
         if getbit(a.value,i)==1
@@ -255,7 +257,29 @@ function square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return reduce(FieldPoint{D,R}(b))
 end
 
-#TODO windowed square
+#similar method, but with windowing
+function window_square(a::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
+    b = zero(StaticUInt{ceil(Int,D/32),UInt64})
+    spread = [StaticUInt{1,UInt64}(spread_bits(i)) for i=0:(1<<window -1)]
+
+    for i in 0:window:D-1
+        u = getbits(a.value, i, window)
+        shiftedxor!(b, spread[u+1], i*2)
+    end
+
+    return reduce(FieldPoint{D,R}(b))
+end
+
+#needed for window_square
+function spread_bits(a::Int)::Int
+    b = 0
+    for i in 0:bits(a)
+        if (a>>i)&1==1
+            b ⊻= 1<<(2*i)
+        end
+    end
+    return b
+end
 
 #uses a version of egcd to invert a
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography

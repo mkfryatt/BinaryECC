@@ -62,6 +62,7 @@ export
     threads_mult,
     reduce,
     square,
+    window_square,
 
     generate_keypair,
     ecdsa_sign,
