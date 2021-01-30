@@ -44,7 +44,7 @@ end
 Returns true if the points ``a`` and ``b`` from the same field are equal,
  and false otherwise.
 """
-function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function ==(a::FieldPoint{D,R}, b::FieldPoint{D,R})::Bool where {D,R}
     return a.value==b.value
 end
 
@@ -52,7 +52,7 @@ end
     +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
 Returns a new element (of the binary field represented by {D,R}) which is the result of ``a+b``.
 """
-function +(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function +(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return FieldPoint{D,R}(a.value ⊻ b.value)
 end
 
@@ -60,7 +60,7 @@ end
     -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
 Returns a new element (of the binary field represented by {D,R}) which is the result of ``a-b``.
 """
-function -(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function -(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return a+b
 end
 
@@ -68,24 +68,24 @@ end
     -(a::FieldPoint{D,R}) where {D,R}
 Returns a new element (of the binary field represented by {D,R}) which is the result of ``-a``.
 """
-function -(a::FieldPoint{D,R}) where {D,R}
+function -(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return copy(a)
 end
 
 #returns the least element b, such that a ≡ b (mod R)
 #note: this is the standard algorithm, but faster specialised versions of it are
 #available for each of the standard fields (in Field_fastreduce.jl)
-function reduce(a::FieldPoint{D,R}) where {D,R}
+function reduce(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
     b = copy(a.value)
-    r = typeof(a.value)(R)
+    r = StaticUInt{2,UInt64}(R)
 
     #iterate over the excess bits of a, left to right
     for i in (64*length(b)-1):-1:D
         if getbit(b, i)==1
             flipbit!(b, i)
-            b = shiftedxor(b, r, i-D)
+            shiftedxor!(b, r, i-D)
         end
     end
 
@@ -100,39 +100,40 @@ end
 Returns a new element (of the binary field represented by {D,R}) which is the
  result of ``a \\cdot b``.
 """
-function *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function *(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
+    return right_to_left_mult(a, b)
+end
+
+#right to left, shift and add
+function right_to_left_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    c = zero(StaticUInt{length(a.value)*2,UInt64})
-    b = changelength(b.value, 2*length(a.value))
+    #c needs to store a polynomial of degree 2D
+    c = zero(StaticUInt{ceil(Int,D/32),UInt64})
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
-            c = shiftedxor(c, b, i)
+            shiftedxor!(c, b.value, i)
         end
     end
 
     return reduce(FieldPoint{D,R}(c))
 end
 
-function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    cs = []
-
-    for i in 1:Threads.nthreads()
-        append!(cs, [zero(StaticUInt{length(a.value)*2,UInt64})])
-    end
-    
-    b = changelength(b.value, 2*length(a.value))
+    #cs needs to store polynomials of degree 2D
+    cs = [zero(StaticUInt{ceil(Int,D/32),UInt64}) for i=1:Threads.nthreads()]
 
     Threads.@threads for i in 0:(D-1)
         if getbit(a.value,i)==1
             t = Threads.threadid()
-            cs[t] = shiftedxor(cs[t], b, i)
+            cs[t] = shiftedxor(cs[t], b.value, i)
         end
     end
 
+    #TODO use something like cumsum / reduce
     for i in 2:Threads.nthreads()
         cs[1] ⊻= cs[i]
     end
@@ -142,51 +143,111 @@ end
 
 #still uses shift and add
 #but performs reduction itself, rather than calling a reduce function
-function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+#Guide to ECC, algorithm 2.33 (ish)
+function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    c = zero(typeof(a.value))
-    b = b.value
+    L = ceil(Int,D/64)
+    shiftedb::StaticUInt{L,UInt64} = b.value
+    c = zero(StaticUInt{L,UInt64})
     r = StaticUInt{2,UInt64}(R)
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
-            c ⊻= b
+            c ⊻= shiftedb
         end
-        b <<= 1
-        if getbit(b, D)==1
-            flipbit!(b, D)
-            b ⊻= r
+        shiftedb <<= 1
+        if getbit(shiftedb, D)==1
+            flipbit!(shiftedb, D)
+            shiftedb ⊻= r
         end
     end
 
     return FieldPoint{D,R}(c)
 end
 
-#TODO fix: supposed to be faster than shift-and-add, but not :(
 #Guide to ECC, Algorithm 2.34, right to left comb method
-function comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    c = zero(StaticUInt{length(a.value)*2,UInt64})
-    b = changelength(b.value, 2*length(b.value))
+    wordsize = 64
+    L = ceil(D/wordsize)
 
-    for k in 0:63
-        for j in 1:length(a.value)
-            if getbit(a.value, (j-1)*64 + k)==1
-                c = shiftedxor(c, b, (j-1)*64)
+    #c needs to store polynomials of degree 2D
+    c = zero(StaticUInt{2*L,UInt64})
+
+    #b needs to store polynomials of degree D+wordsize
+    bvalue = changelength(b.value, L+1)
+
+    for k in 0:(wordsize-1)
+        for j in 0:(L-1)
+            if getbit(a.value, wordsize*j + k)==1
+                shiftedxor!(c, bvalue, j*wordsize)
             end
         end
-        if k!=63 b <<= 1 end
+        if k!=(wordsize-1) bvalue <<= 1 end
     end
 
     return reduce(FieldPoint{D,R}(c))
 end
 
+#Guide to ECC, Algorithm 2.35, left to right comb method
+function left_to_right_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
+    if a.value==b.value return square(a) end
+
+    wordsize = 64
+    L = ceil(Int,D/wordsize)
+    c = zero(StaticUInt{2*L,UInt64})
+
+    for k in (wordsize-1):-1:0
+        for j in 0:(L-1)
+            if getbit(a.value, wordsize*j + k)==1
+                shiftedxor!(c, b.value, j*wordsize)
+            end
+        end
+        if k!=0 c <<= 1 end
+    end
+
+    return reduce(FieldPoint{D,R}(c))
+end
+
+#Guide to ECC, Algorithm 2.36, left to right comb method with windowing
+function window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
+    wordsize = 64
+    L = ceil(Int,D/wordsize)
+    Bu::Array{StaticUInt{L+1,UInt64},1} = [small_mult(b, u) for u=0:(1<<window -1)]
+    c = zero(StaticUInt{2*L,UInt64})
+
+    for k in ((wordsize÷window)-1):-1:0
+        for j in 0:(length(a.value)-1)
+            u = getbits(a.value, window*k + wordsize*j, window)
+            shiftedxor!(c, Bu[u+1], j*wordsize)
+        end
+        if k!=0 c <<= window end
+    end
+
+    return reduce(FieldPoint{D,R}(c))
+end
+
+#used for window_comb_mult
+function small_mult(a::FieldPoint{D,R}, b::Int)::StaticUInt where {D,R}
+    blen = 8*sizeof(b)
+    maxlen = D + blen
+    c = zero(StaticUInt{ceil(Int,maxlen/64),UInt64})
+
+    for i in 0:(blen-1)
+        if (b>>i)&1==1
+            shiftedxor!(c, a.value, i)
+        end
+    end
+
+    return c
+end
+
 #squares the given number, slightly faster than using the standard * algorithm
 #adds a zero between every digit of the original
-function square(a::FieldPoint{D,R}) where {D,R}
-    b = zero(StaticUInt{ceil(Int, D/32),UInt64})
+function square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
+    b = zero(StaticUInt{ceil(Int,D/32),UInt64})
     for i in 0:(D-1)
         if getbit(a.value,i)==1
             flipbit!(b, i*2)
@@ -196,6 +257,8 @@ function square(a::FieldPoint{D,R}) where {D,R}
     return reduce(FieldPoint{D,R}(b))
 end
 
+#TODO windowed square
+
 #uses a version of egcd to invert a
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography
 """
@@ -203,14 +266,15 @@ end
 Returns a new element ``b`` such that ``a b ≡ 1 \\pmod{f_R(x)}``
  (where ``f_R(x)`` is the reduction polynomial for the field).
 """
-function inv(a::FieldPoint{D,R}) where {D,R}
+function inv(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if iszero(a.value) throw(DivideError()) end
 
+    L = ceil(Int,D/64)
     u = a.value
-    v = typeof(a.value)(R)
+    v = StaticUInt{L,UInt64}(R)
     flipbit!(v, D)
-    g1 = one(typeof(a.value))
-    g2 = zero(typeof(a.value))
+    g1 = one(StaticUInt{L,UInt64})
+    g2 = zero(StaticUInt{L,UInt64})
 
     while !isone(u)
         j = bits(u) - bits(v)
@@ -230,7 +294,7 @@ end
 Returns a new element (of the binary field represented by {D,R}) which is the
 result of ``\\frac{a}{b}``.
 """
-function /(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+function /(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return a * inv(b)
 end
 
@@ -240,7 +304,7 @@ end
 Returns a new element (of the binary field represented by {D,R}) which is the
 result of ``a^b``.
 """
-function ^(a::FieldPoint{D,R}, b::Integer) where {D,R}
+function ^(a::FieldPoint{D,R}, b::Integer)::FieldPoint{D,R} where {D,R}
     c = one(typeof(a))
     squaring = a
 
@@ -259,7 +323,7 @@ end
     random(::Type{FieldPoint{D,R}}) where {D,R}
 Returns a random element of the specified field.
 """
-function random(::Type{FieldPoint{D,R}}) where {D,R}
+function random(::Type{FieldPoint{D,R}})::FieldPoint{D,R} where {D,R}
     return FieldPoint{D,R}(random(StaticUInt{ceil(Int,D/64),UInt64}, D-1))
 end
 
@@ -268,7 +332,7 @@ end
 Returns true if ``a`` is the zero element of the field represented by D and R,
  and false otherwise.
 """
-function iszero(a::FieldPoint)
+function iszero(a::FieldPoint)::Bool
     return iszero(a.value)
 end
 
@@ -276,7 +340,7 @@ end
     zero(::Type{FieldPoint{D,R}}) where {D,R}
 Returns the zero element of the specified field.
 """
-function zero(::Type{FieldPoint{D,R}}) where {D,R}
+function zero(::Type{FieldPoint{D,R}})::FieldPoint{D,R} where {D,R}
     return FieldPoint{D,R}(zero(StaticUInt{ceil(Int,D/64),UInt64}))
 end
 
@@ -284,7 +348,7 @@ end
     isone(a::FieldPoint)
 Returns true if ``a`` is equal to one, and false otherwise.
 """
-function isone(a::FieldPoint)
+function isone(a::FieldPoint)::Bool
     return isone(a.value)
 end
 
@@ -292,7 +356,7 @@ end
     one(::Type{FieldPoint{D,R}}) where {D,R}
 Returns element 1 of the specified field.
 """
-function one(::Type{FieldPoint{D,R}}) where {D,R}
+function one(::Type{FieldPoint{D,R}})::FieldPoint{D,R} where {D,R}
     return FieldPoint{D,R}(one(StaticUInt{ceil(Int,D/64),UInt64}))
 end
 
@@ -300,7 +364,7 @@ end
     sqrt(a::FieldPoint{D,R}) where {D,R}
 Returns ``b`` such that ``b^2 ≡ a \\pmod(R)``.
 """
-function sqrt(a::FieldPoint{D,R}) where {D,R}
+function sqrt(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     #a^{2^{D-1}}
     for i in 1:(D-1)
         a *= a
@@ -313,7 +377,7 @@ end
 Converts the given field point to a number (of type BigInt), following the procedure
  set out in SEC 1 (version 2) 2.3.9.
 """
-function convert(::Type{BigInt}, a::FieldPoint)
+function convert(::Type{BigInt}, a::FieldPoint)::BigInt
     return convert(BigInt, a.value)
 end
 

@@ -1,10 +1,10 @@
 #Guide to ECC, Algorithm 2.41
 #altered for a 64bit word size and several different fields
 
-function reduce(a::FieldPoint113)
-    b = copy(a.value)
+function reduce(a::FieldPoint113)::FieldPoint113
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:3
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-1] ⊻= (t>>>40) ⊻ (t>>>49)
         b.value[i-2] ⊻= (t<<24) ⊻ (t<<15)
     end
@@ -14,10 +14,10 @@ function reduce(a::FieldPoint113)
     return FieldPoint113(changelength(b, 2))
 end
 
-function reduce(a::FieldPoint131)
-    b = copy(a.value)
+function reduce(a::FieldPoint131)::FieldPoint131
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:4
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-1] ⊻= t>>>59
         b.value[i-2] ⊻= (t<<5) ⊻ t ⊻ (t>>>1) ⊻ (t>>>3)
         b.value[i-3] ⊻= (t<<63) ⊻ (t<<61)
@@ -29,10 +29,10 @@ function reduce(a::FieldPoint131)
     return FieldPoint131(changelength(b, 3))
 end
 
-function reduce(a::FieldPoint163)
-    b = copy(a.value)
+function reduce(a::FieldPoint163)::FieldPoint163
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:4 #reduce b[i]z^{64(i-1)} mod reduction polynomial
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-2] ⊻= (t>>>28) ⊻ (t>>>29) ⊻ (t>>>32) ⊻ (t>>>35)
         b.value[i-3] ⊻= (t<<36) ⊻ (t<<35) ⊻ (t<<32) ⊻ (t<<29)
     end
@@ -43,10 +43,10 @@ function reduce(a::FieldPoint163)
     return FieldPoint163(changelength(b, 3))
 end
 
-function reduce(a::FieldPoint193)
-    b = copy(a.value)
+function reduce(a::FieldPoint193)::FieldPoint193
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:5
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-2] ⊻= t>>>50
         b.value[i-3] ⊻= (t<<14) ⊻ (t>>>1)
         b.value[i-4] ⊻= t<<63
@@ -58,10 +58,10 @@ function reduce(a::FieldPoint193)
     return FieldPoint193(changelength(b, 4))
 end
 
-function reduce(a::FieldPoint233)
-    b = copy(a.value)
+function reduce(a::FieldPoint233)::FieldPoint233
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:5
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-2] ⊻= t>>>31
         b.value[i-3] ⊻= (t<<33) ⊻ (t>>>41)
         b.value[i-4] ⊻= t<<23
@@ -73,10 +73,10 @@ function reduce(a::FieldPoint233)
     return FieldPoint233(changelength(b, 4))
 end
 
-function reduce(a::FieldPoint239)
-    b = copy(a.value)
+function reduce(a::FieldPoint239)::FieldPoint239
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:5
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-3] ⊻= (t>>>11) ⊻ (t>>>47)
         b.value[i-4] ⊻= (t<<53) ⊻ (t<<17)
     end
@@ -86,10 +86,10 @@ function reduce(a::FieldPoint239)
     return FieldPoint239(changelength(b, 4))
 end
 
-function reduce(a::FieldPoint283)
-    b = copy(a.value)
+function reduce(a::FieldPoint283)::FieldPoint283
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:6
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-4] ⊻= (t>>>15) ⊻ (t>>>20) ⊻ (t>>>22) ⊻ (t>>>27)
         b.value[i-5] ⊻= (t<<49) ⊻ (t<<44) ⊻ (t<<42) ⊻ (t<<37)
     end
@@ -99,10 +99,10 @@ function reduce(a::FieldPoint283)
     return FieldPoint283(changelength(b, 5))
 end
 
-function reduce(a::FieldPoint409)
-    b = copy(a.value)
+function reduce(a::FieldPoint409)::FieldPoint409
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:8
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-5] ⊻= t>>>2
         b.value[i-6] ⊻= (t<<62) ⊻ (t>>>25)
         b.value[i-7] ⊻= t<<39
@@ -114,10 +114,10 @@ function reduce(a::FieldPoint409)
     return FieldPoint409(changelength(b, 7))
 end
 
-function reduce(a::FieldPoint571)
-    b = copy(a.value)
+function reduce(a::FieldPoint571)::FieldPoint571
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:10
-        t = b.value[i]
+        t::UInt64 = b.value[i]
         b.value[i-8] ⊻= (t>>>49) ⊻ (t>>>54) ⊻ (t>>>57) ⊻ (t>>>59)
         b.value[i-9] ⊻= (t<<15) ⊻ (t<<10) ⊻ (t<<7) ⊻ (t<<5)
     end
