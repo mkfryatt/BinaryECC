@@ -131,6 +131,12 @@ function ⊻(x::StaticUInt{L1,T}, y::StaticUInt{L2,T})::StaticUInt{max(L1,L2),T}
     return StaticUInt{L1,T}(value)
 end
 
+function xor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}) where {L1,L2,T}
+    for i in 1:min(L1,L2)
+        x.value[i] ⊻= y.value[i]
+    end
+end
+
 #returns the result of x shifted left by "shift" bits
 function <<(x::StaticUInt{L,T}, shift::Int)::StaticUInt{L,T} where {L,T}
     if shift<0 x>>(-shift)
@@ -152,6 +158,24 @@ function <<(x::StaticUInt{L,T}, shift::Int)::StaticUInt{L,T} where {L,T}
     end
 
     return StaticUInt{L,T}(value)
+end
+
+function leftshift!(x::StaticUInt{L,T}, shift::Int) where {L,T}
+    if shift==0 return
+    elseif shift<0 throw(ArgumentError("Shift must be nonnegative.")) end
+
+    blocksize = 8*sizeof(T)
+    blockshift = shift ÷ blocksize
+    upperbits = shift % blocksize
+    lowerbits = blocksize - upperbits
+    lowermask = (T(1)<<lowerbits)-1
+    uppermask = (T(1)<<upperbits)-1
+
+    for block in L:-1:2+blockshift
+        x.value[block] = (x.value[block-blockshift]&lowermask)<<upperbits
+        x.value[block] ⊻= (x.value[block-blockshift-1]>>lowerbits)&uppermask
+    end
+    x.value[1+blockshift] = (x.value[1+blockshift]&lowermask)<<upperbits
 end
 
 #returns x ⊻ (y<<shift) in a staticuint{L1,T}

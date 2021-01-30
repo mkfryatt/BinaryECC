@@ -61,6 +61,7 @@ export
     noreduce_mult,
     threads_mult,
     reduce,
+    square,
 
     generate_keypair,
     ecdsa_sign,

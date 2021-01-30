@@ -101,7 +101,7 @@ Returns a new element (of the binary field represented by {D,R}) which is the
  result of ``a \\cdot b``.
 """
 function *(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
-    return right_to_left_mult(a, b)
+    return window_comb_mult(a, b, 4)
 end
 
 #right to left, shift and add
@@ -133,12 +133,7 @@ function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} w
         end
     end
 
-    #TODO use something like cumsum / reduce
-    for i in 2:Threads.nthreads()
-        cs[1] ⊻= cs[i]
-    end
-
-    return reduce(FieldPoint{D,R}(cs[1]))
+    return reduce(FieldPoint{D,R}(Base.reduce(⊻,cs)))
 end
 
 #still uses shift and add
@@ -148,18 +143,18 @@ function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} 
     if a.value==b.value return square(a) end
 
     L = ceil(Int,D/64)
-    shiftedb::StaticUInt{L,UInt64} = b.value
+    shiftedb::StaticUInt{L,UInt64} = copy(b.value)
     c = zero(StaticUInt{L,UInt64})
     r = StaticUInt{2,UInt64}(R)
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
-            c ⊻= shiftedb
+            xor!(c, shiftedb)
         end
-        shiftedb <<= 1
+        leftshift!(shiftedb, 1)
         if getbit(shiftedb, D)==1
             flipbit!(shiftedb, D)
-            shiftedb ⊻= r
+            xor!(shiftedb, r)
         end
     end
 
@@ -171,7 +166,7 @@ function right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldP
     if a.value==b.value return square(a) end
 
     wordsize = 64
-    L = ceil(D/wordsize)
+    L = ceil(Int,D/wordsize)
 
     #c needs to store polynomials of degree 2D
     c = zero(StaticUInt{2*L,UInt64})
@@ -185,7 +180,7 @@ function right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldP
                 shiftedxor!(c, bvalue, j*wordsize)
             end
         end
-        if k!=(wordsize-1) bvalue <<= 1 end
+        if k!=(wordsize-1) leftshift!(bvalue,1) end
     end
 
     return reduce(FieldPoint{D,R}(c))
@@ -205,7 +200,7 @@ function left_to_right_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldP
                 shiftedxor!(c, b.value, j*wordsize)
             end
         end
-        if k!=0 c <<= 1 end
+        if k!=0 leftshift!(c,1) end
     end
 
     return reduce(FieldPoint{D,R}(c))
@@ -213,6 +208,7 @@ end
 
 #Guide to ECC, Algorithm 2.36, left to right comb method with windowing
 function window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
+
     wordsize = 64
     L = ceil(Int,D/wordsize)
     Bu::Array{StaticUInt{L+1,UInt64},1} = [small_mult(b, u) for u=0:(1<<window -1)]
@@ -223,7 +219,9 @@ function window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int)::
             u = getbits(a.value, window*k + wordsize*j, window)
             shiftedxor!(c, Bu[u+1], j*wordsize)
         end
-        if k!=0 c <<= window end
+        if k!=0
+            leftshift!(c, window)
+        end
     end
 
     return reduce(FieldPoint{D,R}(c))
