@@ -19,7 +19,7 @@ struct ECPointProjective{D,R} <: AbstractECPoint
         new(x, y, z, ec)
 
     zero(::Type{ECPointProjective{D,R}}, ec::EC) where D where R =
-        new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+        new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
 """

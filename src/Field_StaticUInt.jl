@@ -22,7 +22,7 @@ Types for points in the standard fields (taken from SEC 2, table 3)
 """
 struct FieldPoint{D,R}
     value::StaticUInt
-    FieldPoint{D,R}(value::Integer) where {D,R} = new(StaticUInt{ceil(Int,D/64),UInt64}(value))
+    FieldPoint{D,R}(value::Integer) where {D,R} = new(StaticUInt{ceil(Int,D/@wordsize()),@wordtype()}(value))
     FieldPoint{D,R}(value::StaticUInt) where {D,R} = new(value)
 end
 
@@ -34,7 +34,7 @@ this converts a hex string to a field element.
 function FieldPoint{D,R}(s::String) where {D,R}
     s = replace(s, " " => "")
     if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
-    value = StaticUInt{ceil(Int,D/64),UInt64}(s)
+    value = StaticUInt{ceil(Int,D/@wordsize()),@wordtype()}(s)
     return FieldPoint{D,R}(value)
 end
 
@@ -79,10 +79,10 @@ function reduce(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
     b = copy(a.value)
-    r = StaticUInt{2,UInt64}(R)
+    r = StaticUInt{128÷@wordsize(),@wordtype()}(R)
 
     #iterate over the excess bits of a, left to right
-    for i in (64*length(b)-1):-1:D
+    for i in (length(b)*@wordsize()-1):-1:D
         if getbit(b, i)==1
             flipbit!(b, i)
             shiftedxor!(b, r, i-D)
@@ -90,7 +90,7 @@ function reduce(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     end
 
     #remove excess blocks from b
-    b = changelength(b, ceil(Int,D/64))
+    b = changelength(b, ceil(Int,D/@wordsize()))
     return FieldPoint{D,R}(b)
 end
 
@@ -109,7 +109,7 @@ function right_to_left_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{
     if a.value==b.value return square(a) end
 
     #c needs to store a polynomial of degree 2D
-    c = zero(StaticUInt{ceil(Int,D/32),UInt64})
+    c = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
@@ -124,7 +124,7 @@ function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} w
     if a.value==b.value return square(a) end
 
     #cs needs to store polynomials of degree 2D
-    cs = [zero(StaticUInt{ceil(Int,D/32),UInt64}) for i=1:Threads.nthreads()]
+    cs = [zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()}) for i=1:Threads.nthreads()]
 
     Threads.@threads for i in 0:(D-1)
         if getbit(a.value,i)==1
@@ -142,10 +142,10 @@ end
 function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    L = ceil(Int,D/64)
-    shiftedb::StaticUInt{L,UInt64} = copy(b.value)
-    c = zero(StaticUInt{L,UInt64})
-    r = StaticUInt{2,UInt64}(R)
+    L = ceil(Int,D/@wordsize())
+    shiftedb::StaticUInt{L,@wordtype()} = copy(b.value)
+    c = zero(StaticUInt{L,@wordtype()})
+    r = StaticUInt{128÷@wordsize(),@wordtype()}(R)
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
@@ -165,22 +165,21 @@ end
 function right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    wordsize = 64
-    L = ceil(Int,D/wordsize)
+    L = ceil(Int,D/@wordsize())
 
     #c needs to store polynomials of degree 2D
-    c = zero(StaticUInt{2*L,UInt64})
+    c = zero(StaticUInt{2*L,@wordtype()})
 
     #b needs to store polynomials of degree D+wordsize
     bvalue = changelength(b.value, L+1)
 
-    for k in 0:(wordsize-1)
+    for k in 0:(@wordsize()-1)
         for j in 0:(L-1)
-            if getbit(a.value, wordsize*j + k)==1
-                shiftedxor!(c, bvalue, j*wordsize)
+            if getbit(a.value, j*@wordsize() + k)==1
+                shiftedxor!(c, bvalue, j*@wordsize())
             end
         end
-        if k!=(wordsize-1) leftshift!(bvalue,1) end
+        if k!=(@wordsize()-1) leftshift!(bvalue,1) end
     end
 
     return reduce(FieldPoint{D,R}(c))
@@ -190,14 +189,13 @@ end
 function left_to_right_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    wordsize = 64
-    L = ceil(Int,D/wordsize)
-    c = zero(StaticUInt{2*L,UInt64})
+    L = ceil(Int,D/@wordsize())
+    c = zero(StaticUInt{2*L,@wordtype()})
 
-    for k in (wordsize-1):-1:0
+    for k in (@wordsize()-1):-1:0
         for j in 0:(L-1)
-            if getbit(a.value, wordsize*j + k)==1
-                shiftedxor!(c, b.value, j*wordsize)
+            if getbit(a.value, @wordsize()*j + k)==1
+                shiftedxor!(c, b.value, j*@wordsize())
             end
         end
         if k!=0 leftshift!(c,1) end
@@ -208,15 +206,14 @@ end
 
 #Guide to ECC, Algorithm 2.36, left to right comb method with windowing
 function window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
-    wordsize = 64
-    L = ceil(Int,D/wordsize)
-    Bu::Array{StaticUInt{L+1,UInt64},1} = [small_mult(b, u) for u=0:(1<<window -1)]
-    c = zero(StaticUInt{2*L,UInt64})
+    L = ceil(Int,D/@wordsize())
+    Bu = [small_mult(b, u) for u=0:(1<<window -1)]
+    c = zero(StaticUInt{2*L,@wordtype()})
 
-    for k in ((wordsize÷window)-1):-1:0
+    for k in ((@wordsize()÷window)-1):-1:0
         for j in 0:(length(a.value)-1)
-            u = getbits(a.value, window*k + wordsize*j, window)
-            shiftedxor!(c, Bu[u+1], j*wordsize)
+            u = getbits(a.value, window*k + @wordsize()*j, window)
+            shiftedxor!(c, Bu[u+1], j*@wordsize())
         end
         if k!=0
             leftshift!(c, window)
@@ -230,7 +227,7 @@ end
 function small_mult(a::FieldPoint{D,R}, b::Int)::StaticUInt where {D,R}
     blen = 8*sizeof(b)
     maxlen = D + blen
-    c = zero(StaticUInt{ceil(Int,maxlen/64),UInt64})
+    c = zero(StaticUInt{ceil(Int,maxlen/@wordsize()),@wordtype()})
 
     for i in 0:(blen-1)
         if (b>>i)&1==1
@@ -247,7 +244,7 @@ end
 
 #adds a zero between every digit of the original
 function standard_square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
-    b = zero(StaticUInt{ceil(Int,D/32),UInt64})
+    b = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
     for i in 0:(D-1)
         if getbit(a.value,i)==1
             flipbit!(b, i*2)
@@ -259,8 +256,8 @@ end
 
 #similar method, but with windowing
 function window_square(a::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
-    b = zero(StaticUInt{ceil(Int,D/32),UInt64})
-    spread = [StaticUInt{1,UInt64}(spread_bits(i)) for i=0:(1<<window -1)]
+    b = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
+    spread = [StaticUInt{1,@wordtype()}(spread_bits(i)) for i=0:(1<<window -1)]
 
     for i in 0:window:D-1
         u = getbits(a.value, i, window)
@@ -291,12 +288,12 @@ Returns a new element ``b`` such that ``a b ≡ 1 \\pmod{f_R(x)}``
 function inv(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if iszero(a.value) throw(DivideError()) end
 
-    L = ceil(Int,D/64)
+    L = ceil(Int,D/@wordsize())
     u = a.value
-    v = StaticUInt{L,UInt64}(R)
+    v = StaticUInt{L,@wordtype()}(R)
     flipbit!(v, D)
-    g1 = one(StaticUInt{L,UInt64})
-    g2 = zero(StaticUInt{L,UInt64})
+    g1 = one(StaticUInt{L,@wordtype()})
+    g2 = zero(StaticUInt{L,@wordtype()})
 
     while !isone(u)
         j = bits(u) - bits(v)
@@ -346,7 +343,7 @@ end
 Returns a random element of the specified field.
 """
 function random(::Type{FieldPoint{D,R}})::FieldPoint{D,R} where {D,R}
-    return FieldPoint{D,R}(random(StaticUInt{ceil(Int,D/64),UInt64}, D-1))
+    return FieldPoint{D,R}(random(StaticUInt{ceil(Int,D/@wordsize()),@wordtype()}, D-1))
 end
 
 """
@@ -363,7 +360,7 @@ end
 Returns the zero element of the specified field.
 """
 function zero(::Type{FieldPoint{D,R}})::FieldPoint{D,R} where {D,R}
-    return FieldPoint{D,R}(zero(StaticUInt{ceil(Int,D/64),UInt64}))
+    return FieldPoint{D,R}(zero(StaticUInt{ceil(Int,D/@wordsize()),@wordtype()}))
 end
 
 """
@@ -379,7 +376,7 @@ end
 Returns element 1 of the specified field.
 """
 function one(::Type{FieldPoint{D,R}})::FieldPoint{D,R} where {D,R}
-    return FieldPoint{D,R}(one(StaticUInt{ceil(Int,D/64),UInt64}))
+    return FieldPoint{D,R}(one(StaticUInt{ceil(Int,D/@wordsize()),@wordtype()}))
 end
 
 """

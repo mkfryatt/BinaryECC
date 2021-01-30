@@ -17,7 +17,7 @@ end
 @testset "Elliptic Curve" begin
     G = SECT163K1.G
     G_other = SECT163R2.G
-    O = ECPointAffine(G.ec)
+    O = zero(typeof(G), G.ec)
     @test iszero(O)
     @test G-G == O
     @test G*5 == G+G+G+G+G

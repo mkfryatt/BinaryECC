@@ -9,9 +9,18 @@ import Base:
 using SHA: sha256
 using StaticArrays: MVector
 
+#on a 32 bit system, these will be UInt32 and 32 respectively
+#and on a 64bit system they will be UInt64 and 64
+macro wordtype()
+    return UInt
+end
+macro wordsize()
+    return 8*sizeof(UInt)
+end
+
 include("StaticUInt.jl")
 include("Field_StaticUInt.jl")
-include("Field_fastreduce.jl")
+if @wordsize()==64 include("Field_fastreduce.jl") end
 include("EC.jl")
 include("ECAffine.jl")
 include("ECLD.jl")

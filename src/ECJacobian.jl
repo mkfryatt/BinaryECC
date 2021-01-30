@@ -19,7 +19,7 @@ struct ECPointJacobian{D,R} <: AbstractECPoint
         new(x, y, z, ec)
 
     zero(::Type{ECPointJacobian{D,R}}, ec::EC{D,R}) where {D,R} =
-        new(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+        new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
 """
@@ -40,7 +40,7 @@ function +(p1::ECPointJacobian{D,R}, p2::ECPointJacobian{D,R}) where {D,R}
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
-    if p1==-p2 return ECPointJacobian{D,R}(p1.ec) end
+    if p1==-p2 return zero(ECPointJacobian{D,R}, p1.ec) end
     if p1==p2 return double(p1) end
 
     #Adds: 8
@@ -74,7 +74,7 @@ end
 
 function double(p::ECPointJacobian{D,R}) where {D,R}
     if iszero(p) return p end
-    if p==-p return ECPointJacobian{D,R}(p.ec) end
+    if p==-p return zero(ECPointJacobian{D,R}, p.ec) end
 
     #Adds: 5
     #Mults: 10
@@ -101,10 +101,10 @@ end
 
 function *(p::ECPointJacobian{D,R}, n::Integer) where {D,R}
     if iszero(p) return p end
-    if n==0 return ECPointJacobian{D,R}(p.ec) end
+    if n==0 return zero(ECPointJacobian{D,R}, p.ec) end
     if n==1 return p end
 
-    result = ECPointJacobian{D,R}(p.ec)
+    result = zero(ECPointJacobian{D,R}, p.ec)
     doubling = p
     while n>0
         if n&1==1
