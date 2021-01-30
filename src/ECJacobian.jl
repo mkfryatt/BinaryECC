@@ -6,7 +6,7 @@ Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on
 ``E: y^2 +  xyz = x^3 + ax^2z^2 + bz^6``
 
 Each point ``(x, y)`` on the curve is represented by a set of equivalent Jacobian points,
-``\\{(\\lambda^2 x, \\lambda^3 y, \\lambda z) : \\lambda \\in K^* \\}``
+``\\{(\\lambda^2 x, \\lambda^3 y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
 struct ECPointJacobian{D,R} <: AbstractECPoint

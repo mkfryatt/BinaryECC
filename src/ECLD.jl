@@ -5,8 +5,8 @@ Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on
 
 ``E: y^2 +  xyz = x^3z + ax^2z^2 + bz^4``
 
-Each (affine) point on the curve is represented by a set of Lopez-Dahab points,
-``\\{(\\lambda x, \\lambda^2 y, \\lambda z) : \\lambda \\in K^* \\}``
+Each (affine) point ``(x, y)`` is represented by a set of Lopez-Dahab points,
+``\\{(\\lambda x, \\lambda^2 y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
 struct ECPointLD{D,R} <: AbstractECPoint

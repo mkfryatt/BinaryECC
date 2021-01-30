@@ -5,8 +5,8 @@ Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on
 
 ``E: y^2z +  xyz = x^3 + ax^2z + bz^3``
 
-Each (affine) point on the curve is represented by a set of projective points,
-``\\{(\\lambda x, \\lambda y, \\lambda z) : \\lambda \\in K^* \\}``
+Each (affine) point ``(x, y)`` is represented by a set of projective points,
+``\\{(\\lambda x, \\lambda y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
 struct ECPointProjective{D,R} <: AbstractECPoint
