@@ -6,8 +6,8 @@ Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
 ``E: y^2 +  xy = x^3 + ax^2 + b``
 """
 struct ECPointAffine{D,R} <: AbstractECPoint
-    x::FieldPoint{D,R}
-    y::FieldPoint{D,R}
+    x::BFieldPoint{D,R}
+    y::BFieldPoint{D,R}
     ec::EC{D,R}
 end
 
@@ -32,8 +32,8 @@ function ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
 
     #TODO handle compressed format
 
-    x = FieldPoint{D,R}(s[3:4+2*floor(Int16, D / 8)])
-    y = FieldPoint{D,R}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
+    x = BFieldPoint{D,R}(s[3:4+2*floor(Int16, D / 8)])
+    y = BFieldPoint{D,R}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
 
     return ECPointAffine(x, y, ec)
 end
@@ -174,7 +174,7 @@ end
 
 #needed for montgomery's powering ladder
 #finds y1 given that (x1, y1) + p == (x2, y2)
-function find_point(x1::FieldPoint{D,R}, x2::FieldPoint{D,R}, p::ECPointAffine{D,R}) where {D,R}
+function find_point(x1::BFieldPoint{D,R}, x2::BFieldPoint{D,R}, p::ECPointAffine{D,R}) where {D,R}
     r1 = x1+p.x
     r2 = x2+p.x
     y1 = r1*r2 + p.x^2 + p.y
@@ -225,7 +225,7 @@ end
 Returns an object representing the point at infinity on the given curve.
 """
 function zero(::Type{ECPointAffine{D,R}}, ec::EC{D,R}) where {D,R}
-    return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+    return ECPointAffine{D,R}(BFieldPoint{D,R}(0), BFieldPoint{D,R}(0), ec)
 end
 
 """
@@ -233,5 +233,5 @@ end
 Returns an object representing the point at infinity on the given curve.
 """
 function zero(::Type{ECPointAffine}, ec::EC{D,R}) where {D,R}
-    return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+    return ECPointAffine{D,R}(BFieldPoint{D,R}(0), BFieldPoint{D,R}(0), ec)
 end

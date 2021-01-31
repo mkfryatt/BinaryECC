@@ -1,5 +1,5 @@
 #Guide to ECC, Algorithm 2.41
-function reduce(a::FieldPoint163)::FieldPoint163
+function reduce(a::BFieldPoint163)::BFieldPoint163
     b::StaticUInt{length(a.value),UInt32} = copy(a.value)
     for i in length(b):-1:7
         t::UInt32 = b.value[i]
@@ -12,10 +12,10 @@ function reduce(a::FieldPoint163)::FieldPoint163
     b.value[1] ⊻= (t<<7) ⊻ (t<<6) ⊻ (t<<3) ⊻ t
     b.value[2] ⊻= (t>>>25) ⊻ (t>>>26)
     b.value[6] &= (UInt32(1)<<3)-1
-    return FieldPoint163(changelength(b, 6))
+    return BFieldPoint163(changelength(b, 6))
 end
 
-function reduce(a::FieldPoint233)::FieldPoint233
+function reduce(a::BFieldPoint233)::BFieldPoint233
     b::StaticUInt{length(a.value),UInt32} = copy(a.value)
     for i in length(b):-1:9
         t::UInt32 = b.value[i]
@@ -30,10 +30,10 @@ function reduce(a::FieldPoint233)::FieldPoint233
     b.value[3] ⊻= t<<10
     b.value[4] ⊻= t>>>22
     b.value[8] &= (UInt32(1)<<9)-1
-    return FieldPoint233(changelength(b, 8))
+    return BFieldPoint233(changelength(b, 8))
 end
 
-function reduce(a::FieldPoint283)::FieldPoint283
+function reduce(a::BFieldPoint283)::BFieldPoint283
     b::StaticUInt{length(a.value),UInt32} = copy(a.value)
     for i in length(b):-1:10
         t::UInt32 = b.value[i]
@@ -44,10 +44,10 @@ function reduce(a::FieldPoint283)::FieldPoint283
     t = b.value[9]>>>27
     b.value[1] ⊻= t ⊻ (t<<5) ⊻ (t<<7) ⊻ (t<<12)
     b.value[9] &= (UInt32(1)<<27)-1
-    return FieldPoint283(changelength(b, 9))
+    return BFieldPoint283(changelength(b, 9))
 end
 
-function reduce(a::FieldPoint409)::FieldPoint409
+function reduce(a::BFieldPoint409)::BFieldPoint409
     b::StaticUInt{length(a.value),UInt32} = copy(a.value)
     for i in length(b):-1:14
         t::UInt32 = b.value[i]
@@ -61,10 +61,10 @@ function reduce(a::FieldPoint409)::FieldPoint409
     b.value[1] ⊻= t
     b.value[3] ⊻= t<<23
     b.value[13] &= (UInt32(1)<<25)-1
-    return FieldPoint409(changelength(b, 13))
+    return BFieldPoint409(changelength(b, 13))
 end
 
-function reduce(a::FieldPoint571)::FieldPoint571
+function reduce(a::BFieldPoint571)::BFieldPoint571
     b::StaticUInt{length(a.value),UInt32} = copy(a.value)
     for i in length(b):-1:19
         t::UInt32 = b.value[i]
@@ -75,5 +75,5 @@ function reduce(a::FieldPoint571)::FieldPoint571
     t = b.value[18]>>>27
     b.value[1] ⊻= t ⊻ (t<<2) ⊻ (t<<5) ⊻ (t<<10)
     b.value[18] &= (UInt32(1)<<27)-1
-    return FieldPoint571(changelength(b, 18))
+    return BFieldPoint571(changelength(b, 18))
 end

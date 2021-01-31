@@ -24,7 +24,7 @@ Converts a point from affine coordinates to Jacobian coordinates.
 """
 function convert(::Type{ECPointJacobian}, p::ECPointAffine{D,R}) where {D,R}
     if iszero(p) return ECPointJacobian{D,R}(ec) end
-    return ECPointJacobian{D,R}(p.x, p.y, FieldPoint{D,R}(1), p.ec)
+    return ECPointJacobian{D,R}(p.x, p.y, BFieldPoint{D,R}(1), p.ec)
 end
 
 """
@@ -42,7 +42,7 @@ Converts a point from affine coordinates to Lopez-Dahab coordinates.
 """
 function convert(::Type{ECPointLD}, p::ECPointAffine{D,R}) where {D,R}
     if iszero(p) return ECPointLD{D,R}(ec) end
-    return ECPointLD{D,R}(p.x, p.y, FieldPoint{D,R}(1), p.ec)
+    return ECPointLD{D,R}(p.x, p.y, BFieldPoint{D,R}(1), p.ec)
 end
 
 """

@@ -22,8 +22,8 @@ Contains fields ``a`` and ``b``, where:
 ``y^2 + xy = x^3 + ax^2 + b``
 """
 struct EC{D,R}
-    a::FieldPoint{D,R}
-    b::FieldPoint{D,R}
+    a::BFieldPoint{D,R}
+    b::BFieldPoint{D,R}
 end
 
 """

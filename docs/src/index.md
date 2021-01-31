@@ -3,6 +3,6 @@
 *Elliptic curve cryptography using binary fields.*
 
 ## Package Features
-- Finite binary arithmetic
+- Finite binary field arithmetic
 - Elliptic curve arithmetic
 - Cryptographic primitives

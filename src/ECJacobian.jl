@@ -10,9 +10,9 @@ Each point ``(x, y)`` on the curve is represented by a set of equivalent Jacobia
 (where ``K^*`` is the binary field that the curve is based on).
 """
 struct ECPointJacobian{D,R} <: AbstractECPoint
-    x::FieldPoint{D,R}
-    y::FieldPoint{D,R}
-    z::FieldPoint{D,R}
+    x::BFieldPoint{D,R}
+    y::BFieldPoint{D,R}
+    z::BFieldPoint{D,R}
     ec::EC{D,R}
 end
 
@@ -127,7 +127,7 @@ end
 Returns an object representing the point at infinity on the given curve.
 """
 function zero(::Type{ECPointJacobian{D,R}}, ec::EC{D,R}) where {D,R}
-    return ECPointJacobian{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+    return ECPointJacobian{D,R}(BFieldPoint{D,R}(0), BFieldPoint{D,R}(0), BFieldPoint{D,R}(0), ec)
 end
 
 """
@@ -135,5 +135,5 @@ end
 Returns an object representing the point at infinity on the given curve.
 """
 function zero(::Type{ECPointJacobian}, ec::EC{D,R}) where {D,R}
-    return ECPointJacobian{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+    return ECPointJacobian{D,R}(BFieldPoint{D,R}(0), BFieldPoint{D,R}(0), BFieldPoint{D,R}(0), ec)
 end

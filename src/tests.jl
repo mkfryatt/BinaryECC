@@ -3,8 +3,8 @@ include("..\\testvectors\\test.jl")
 using Test
 
 @testset "Field" begin
-    x = random(FieldPoint163)
-    y = random(FieldPoint163)
+    x = random(BFieldPoint163)
+    y = random(BFieldPoint163)
     @test x*y == y*x #test commutativity for mult
     @test x+y == y+x #test commutativity for add
     @test iszero(x+x) #test doubling

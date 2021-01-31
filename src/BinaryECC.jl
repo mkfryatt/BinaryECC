@@ -20,9 +20,9 @@ macro wordsize()
 end
 
 include("StaticUInt.jl")
-include("Field_StaticUInt.jl")
-if @wordsize()==64 include("Field_fastreduce64.jl")
-elseif @wordsize()==32 include("Field_fastreduce32.jl")
+include("BField_StaticUInt.jl")
+if @wordsize()==64 include("BField_fastreduce64.jl")
+elseif @wordsize()==32 include("BField_fastreduce32.jl")
 end
 include("EC.jl")
 include("ECAffine.jl")
@@ -33,7 +33,7 @@ include("CurveDomainParams.jl")
 include("Crypto.jl")
 
 export
-    FieldPoint,
+    BFieldPoint,
     EC,
     AbstractECPoint,
     ECPointAffine,
@@ -95,14 +95,14 @@ export
     SECT571K1,
     SECT571R1,
 
-    FieldPoint113,
-    FieldPoint131,
-    FieldPoint163,
-    FieldPoint193,
-    FieldPoint233,
-    FieldPoint239,
-    FieldPoint283,
-    FieldPoint409,
-    FieldPoint571
+    BFieldPoint113,
+    BFieldPoint131,
+    BFieldPoint163,
+    BFieldPoint193,
+    BFieldPoint233,
+    BFieldPoint239,
+    BFieldPoint283,
+    BFieldPoint409,
+    BFieldPoint571
 
 end
