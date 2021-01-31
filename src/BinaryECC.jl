@@ -20,7 +20,9 @@ end
 
 include("StaticUInt.jl")
 include("Field_StaticUInt.jl")
-if @wordsize()==64 include("Field_fastreduce.jl") end
+if @wordsize()==64 include("Field_fastreduce64.jl")
+elseif @wordsize()==32 include("Field_fastreduce32.jl")
+end
 include("EC.jl")
 include("ECAffine.jl")
 include("ECLD.jl")
@@ -71,6 +73,7 @@ export
     threads_mult,
     reduce,
     square,
+    standard_square,
     window_square,
 
     generate_keypair,
