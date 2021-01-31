@@ -14,12 +14,6 @@ struct ECPointJacobian{D,R} <: AbstractECPoint
     y::FieldPoint{D,R}
     z::FieldPoint{D,R}
     ec::EC{D,R}
-
-    ECPointJacobian{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
-        new(x, y, z, ec)
-
-    zero(::Type{ECPointJacobian{D,R}}, ec::EC{D,R}) where {D,R} =
-        new{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
 """
@@ -120,6 +114,26 @@ function isvalid(p::ECPointJacobian)
     return iszero(p) || (p.y^2 + p.x*p.y*p.z == p.x^3 + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^6)
 end
 
+"""
+    iszero(p::ECPointJacobian)
+Returns true if ``p = \\mathcal{O}``, i.e it is the point at infinity.
+"""
 function iszero(p::ECPointJacobian)
     return iszero(p.z)
+end
+
+"""
+    zero(::Type{ECPointJacobian{D,R}}, ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function zero(::Type{ECPointJacobian{D,R}}, ec::EC{D,R}) where {D,R}
+    return ECPointJacobian{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+end
+
+"""
+    zero(::Type{ECPointJacobian}, ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function zero(::Type{ECPointJacobian}, ec::EC{D,R}) where {D,R}
+    return ECPointJacobian{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end

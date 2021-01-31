@@ -64,17 +64,16 @@ function -(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return a+b
 end
 
-"""
-    -(a::FieldPoint{D,R}) where {D,R}
-Returns a new element (of the binary field represented by {D,R}) which is the result of ``-a``.
-"""
 function -(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return copy(a)
 end
 
-#returns the least element b, such that a ≡ b (mod R)
 #note: this is the standard algorithm, but faster specialised versions of it are
 #available for each of the standard fields (in Field_fastreduce.jl)
+"""
+    reduce(a::FieldPoint{D,R}) where {D,R}
+Returns the least element ``b``, such that ``a \\equiv b \\pmod{R}``.
+"""
 function reduce(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
@@ -94,7 +93,6 @@ function reduce(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return FieldPoint{D,R}(b)
 end
 
-#right to left, shift and add
 """
     *(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
 Returns a new element (of the binary field represented by {D,R}) which is the
@@ -104,7 +102,10 @@ function *(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return window_comb_mult(a, b, 4)
 end
 
-#right to left, shift and add
+"""
+    right_to_left_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns ``a \\cdot b`` using the right to left shift and add method.
+"""
 function right_to_left_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
@@ -120,6 +121,10 @@ function right_to_left_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{
     return reduce(FieldPoint{D,R}(c))
 end
 
+"""
+    threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns ``a \\cdot b`` using the right to left shift and add method with multithreading.
+"""
 function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
@@ -136,9 +141,11 @@ function threads_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} w
     return reduce(FieldPoint{D,R}(Base.reduce(⊻,cs)))
 end
 
-#still uses shift and add
-#but performs reduction itself, rather than calling a reduce function
-#Guide to ECC, algorithm 2.33 (ish)
+"""
+    noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns ``a \\cdot b`` using the right to left shift and add method,
+without needing to call a reduction function.
+"""
 function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
@@ -161,7 +168,11 @@ function noreduce_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} 
     return FieldPoint{D,R}(c)
 end
 
-#Guide to ECC, Algorithm 2.34, right to left comb method
+"""
+    right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns ``a \\cdot b`` using a right to left comb method
+(described in Guide to Elliptic Curve Cryptography, algorithm 2.34).
+"""
 function right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
@@ -185,7 +196,11 @@ function right_to_left_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldP
     return reduce(FieldPoint{D,R}(c))
 end
 
-#Guide to ECC, Algorithm 2.35, left to right comb method
+"""
+    left_to_right_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}) where {D,R}
+Returns ``a \\cdot b`` using a left to right comb method
+(described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
+"""
 function left_to_right_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
@@ -204,7 +219,13 @@ function left_to_right_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R})::FieldP
     return reduce(FieldPoint{D,R}(c))
 end
 
-#Guide to ECC, Algorithm 2.36, left to right comb method with windowing
+"""
+    window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int) where {D,R}
+Returns ``a \\cdot b`` using a left to right comb method windowing
+(described in Guide to Elliptic Curve Cryptography, algorithm 2.36).
+
+Performs best with a window size of 4.
+"""
 function window_comb_mult(a::FieldPoint{D,R}, b::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
     L = ceil(Int,D/@wordsize())
     Bu = [small_mult(b, u) for u=0:(1<<window -1)]
@@ -238,6 +259,11 @@ function small_mult(a::FieldPoint{D,R}, b::Int)::StaticUInt where {D,R}
     return c
 end
 
+"""
+    square(a::FieldPoint{D,R}) where {D,R}
+Returns a new element (of the binary field represented by {D,R}) which is the
+result of ``a^2``.
+"""
 function square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return window_square(a, 4)
 end
@@ -254,7 +280,11 @@ function standard_square(a::FieldPoint{D,R})::FieldPoint{D,R} where {D,R}
     return reduce(FieldPoint{D,R}(b))
 end
 
-#similar method, but with windowing
+"""
+    window_square(a::FieldPoint{D,R}, window::Int) where {D,R}
+Returns ``a^2`` by inserting a zero between every bit in the original, using
+the specified window size.
+"""
 function window_square(a::FieldPoint{D,R}, window::Int)::FieldPoint{D,R} where {D,R}
     b = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
     spread = [StaticUInt{1,@wordtype()}(spread_bits(i)) for i=0:(1<<window -1)]

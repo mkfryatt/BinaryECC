@@ -14,13 +14,6 @@ struct ECPointLD{D,R} <: AbstractECPoint
     y::FieldPoint{D,R}
     z::FieldPoint{D,R}
     ec::EC{D,R}
-
-    ECPointLD{D,R}(x::FieldPoint{D,R}, y::FieldPoint{D,R}, z::FieldPoint{D,R}, ec::EC{D,R}) where {D,R} =
-        new(x, y, z, ec)
-end
-
-function zero(::Type{ECPointLD{D,R}}, ec::EC{D,R}) where {D,R}
-    return ECPointLD{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end
 
 """
@@ -114,6 +107,26 @@ function isvalid(p::ECPointLD)
     return iszero(p) || (p.y^2 + p.x*p.y*p.z == p.x^3*p.z + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^4)
 end
 
+"""
+    iszero(p::ECPointLD)
+Returns true if ``p = \\mathcal{O}``, i.e it is the point at infinity.
+"""
 function iszero(p::ECPointLD)
     return iszero(p.y) && iszero(p.z)
+end
+
+"""
+    zero(::Type{ECPointLD{D,R}}, ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function zero(::Type{ECPointLD{D,R}}, ec::EC{D,R}) where {D,R}
+    return ECPointLD{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+end
+
+"""
+    zero(::Type{ECPointLD}, ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function zero(::Type{ECPointLD}, ec::EC{D,R}) where {D,R}
+    return ECPointLD{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end

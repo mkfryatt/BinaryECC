@@ -183,16 +183,22 @@ function find_point(x1::FieldPoint{D,R}, x2::FieldPoint{D,R}, p::ECPointAffine{D
     return ECPointAffine{D,R}(x1, y1, p.ec)
 end
 
-#Guide to ECC, algorithm 3.31
-function naf_mult(P::ECPointAffine{D,R}, n::Integer) where {D,R}
+"""
+    naf_mult(p::ECPointAffine{D,R}, n::Integer) where {D,R}
+Returns ``p \\cdot n``.
+
+Uses the binary NAF multiplication method described in Guide to Elliptic Curve Cryptography,
+algorithm 3.31.
+"""
+function naf_mult(p::ECPointAffine{D,R}, n::Integer) where {D,R}
     (adds, subs, l) = naf(n)
-    Q = zero(ECPointAffine{D,R}, P.ec)
+    Q = zero(ECPointAffine{D,R}, p.ec)
     for i in (l-1):-1:0
         Q = double(Q)
         if (adds>>i)&1==1
-            Q += P
+            Q += p
         elseif (subs>>i)&1==1
-            Q -= P
+            Q -= p
         end
     end
     return Q
@@ -219,5 +225,13 @@ end
 Returns an object representing the point at infinity on the given curve.
 """
 function zero(::Type{ECPointAffine{D,R}}, ec::EC{D,R}) where {D,R}
+    return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
+end
+
+"""
+    zero(::Type{ECPointAffine, ec::EC{D,R}) where {D,R}
+Returns an object representing the point at infinity on the given curve.
+"""
+function zero(::Type{ECPointAffine}, ec::EC{D,R}) where {D,R}
     return ECPointAffine{D,R}(FieldPoint{D,R}(0), FieldPoint{D,R}(0), ec)
 end

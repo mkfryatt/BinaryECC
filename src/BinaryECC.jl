@@ -4,7 +4,8 @@ import Base:
     +, -, *, /, ^, ==, ⊻, >>, <<,
     repr, inv, isvalid,
     iszero, isone, zero, one,
-    convert, length, copy, sqrt
+    convert, length, copy, sqrt,
+    reduce
 
 using SHA: sha256
 using StaticArrays: MVector
@@ -27,7 +28,6 @@ include("EC.jl")
 include("ECAffine.jl")
 include("ECLD.jl")
 include("ECJacobian.jl")
-include("ECProjective.jl")
 include("ECMix.jl")
 include("CurveDomainParams.jl")
 include("Crypto.jl")
@@ -39,7 +39,6 @@ export
     ECPointAffine,
     ECPointLD,
     ECPointJacobian,
-    ECPointProjective,
     CurveDomainParams,
     ECMismatchException,
     ECKeyPair,
