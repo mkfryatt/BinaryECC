@@ -24,6 +24,7 @@ include("BField_StaticUInt.jl")
 if @wordsize()==64 include("BField_fastreduce64.jl")
 elseif @wordsize()==32 include("BField_fastreduce32.jl")
 end
+include("PField_BigInt.jl")
 include("EC.jl")
 include("ECAffine.jl")
 include("ECLD.jl")
@@ -34,6 +35,7 @@ include("Crypto.jl")
 
 export
     BFieldPoint,
+    PFieldPoint,
     EC,
     AbstractECPoint,
     ECPointAffine,

@@ -56,6 +56,14 @@ function *(n::Integer, p::AbstractECPoint)
     return p*n
 end
 
+function *(n::PFieldPoint, p::AbstractECPoint)
+    return p*n.value
+end
+
+function *(p::AbstractECPoint, n::PFieldPoint)
+    return p*n.value
+end
+
 """
     mont_pow_ladder(p::AbstractECPoint, n::Integer)
 Performs ``p \\cdot n`` with a fixed sequence of curve and field operations.

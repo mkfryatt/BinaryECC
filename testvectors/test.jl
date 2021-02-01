@@ -1,5 +1,5 @@
-function testcurve(curve::String)
-    println("Testing ", curve, ":")
+function testcurve(curve::String, verbose=true)
+    if verbose println("Testing ", curve, ":") end
     tests = readlines(".\\testvectors\\"*curve*".txt")
     G = eval(Symbol(curve)).G
 
@@ -8,12 +8,12 @@ function testcurve(curve::String)
         expectedx = typeof(G.ec.a)(tests[i+1][5:length(tests[i+1])])
         expectedy = typeof(G.ec.a)(tests[i+2][5:length(tests[i+2])])
 
-        print("G*", k)
+        if verbose print("G*", k) end
         Gk = G*k
         if Gk.x==expectedx && Gk.y==expectedy
-            println(" is correct.")
+            if verbose println(" is correct.") end
         else
-            println(" is incorrect.")
+            if verbose println(" is incorrect.") end
             return false
         end
     end
