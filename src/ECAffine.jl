@@ -113,12 +113,11 @@ function *(p::ECPointAffine{D,R}, n::Integer) where {D,R}
     if n==1 return p end
 
     result = zero(ECPointAffine{D,R}, p.ec)
-    doubling = p
     while n>0
         if n&1==1
-            result += doubling
+            result += p
         end
-        doubling = double(doubling)
+        p = double(p)
         n >>= 1
     end
     return result

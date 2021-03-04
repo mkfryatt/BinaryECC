@@ -66,6 +66,7 @@ export
     zero,
     one,
     random,
+    window_shift_and_add_mult,
     right_to_left_mult,
     left_to_right_comb_mult,
     right_to_left_comb_mult,

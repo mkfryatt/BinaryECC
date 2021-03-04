@@ -99,7 +99,7 @@ Returns a new element (of the binary field represented by {D,R}) which is the
  result of ``a \\cdot b``.
 """
 function *(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
-    return window_comb_mult(a, b, 4)
+    return window_shift_and_add_mult(a, b, 4)
 end
 
 """
@@ -116,6 +116,22 @@ function right_to_left_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoi
         if getbit(a.value,i)==1
             shiftedxor!(c, b.value, i)
         end
+    end
+
+    return reduce(BFieldPoint{D,R}(c))
+end
+
+function window_shift_and_add_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
+    if a.value==b.value return square(a) end
+
+    Bu = [small_mult(b, u) for u=0:(1<<window -1)]
+
+    #c needs to store a polynomial of degree 2D
+    c = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
+
+    for i in 0:window:(D-1)
+        u = getbits(a.value, i, window)
+        shiftedxor!(c, Bu[u+1], i)
     end
 
     return reduce(BFieldPoint{D,R}(c))
@@ -319,7 +335,7 @@ function inv(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
     if iszero(a.value) throw(DivideError()) end
 
     L = ceil(Int,D/@wordsize())
-    u = a.value
+    u = copy(a.value)
     v = StaticUInt{L,@wordtype()}(R)
     flipbit!(v, D)
     g1 = one(StaticUInt{L,@wordtype()})
@@ -332,8 +348,8 @@ function inv(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
             g1, g2 = g2, g1
             j = -j
         end
-        u = shiftedxor(u, v, j)
-        g1 = shiftedxor(g1, g2, j)
+        shiftedxor!(u, v, j)
+        shiftedxor!(g1, g2, j)
     end
     return BFieldPoint{D,R}(g1)
 end

@@ -1,6 +1,41 @@
 #Guide to ECC, Algorithm 2.41
 #altered for a 64bit word size and several different fields
 
+function getindices(b::Unsigned)
+    indices = []
+    for i in 0:(sizeof(b)*8 -1)
+        if (b>>i)&1 == 1
+            append!(indices, i)
+        end
+    end
+    return indices
+end
+
+function fastreduce(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+    bits = [(64+((bit-D)%64), (D-bit)÷64) for bit in getindices(R)]
+    newL = ceil(Int, D/64)
+
+    b::StaticUInt{length(a.value),UInt64} = copy(a.value)
+    for i in length(b):-1:(newL+1)
+        t::UInt64 = b.value[i]
+        for (upperbits, offset) in bits
+            b.value[i-offset] ⊻= t>>>(64-upperbits)
+            b.value[i-offset-1] ⊻= t<<upperbits
+        end
+    end
+
+    save_bits = D%64
+    t = (b.value[newL]>>>save_bits)<<save_bits
+    for (upperbits, offset) in bits
+        b.value[newL-offset] ⊻= t>>>(64-upperbits)
+        if newL-offset>1
+            b.value[newL-offset-1] ⊻= t<<upperbits
+        end
+    end
+    b.value[newL] &= (UInt64(1)<<save_bits)-1
+    return BFieldPoint{D,R}(changelength(b, newL))
+end
+
 function reduce(a::BFieldPoint113)::BFieldPoint113
     b::StaticUInt{length(a.value),UInt64} = copy(a.value)
     for i in length(b):-1:3
@@ -13,6 +48,7 @@ function reduce(a::BFieldPoint113)::BFieldPoint113
     b.value[2] &= (UInt64(1)<<49)-1
     return BFieldPoint113(changelength(b, 2))
 end
+
 
 function reduce(a::BFieldPoint131)::BFieldPoint131
     b::StaticUInt{length(a.value),UInt64} = copy(a.value)
