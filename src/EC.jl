@@ -119,3 +119,23 @@ function naf(k::T) where T<:Integer
 
     return (adds, subs, i)
 end
+
+#Guide to ECC, algorithm 3.35
+#Computing the width-w NAF of a positive integer
+function naf(k::Integer, w::Int)
+    if k<=0 throw(ArgumentError("Expected a positive value.")) end
+    i = 1
+    windowsize = 1<<w
+    representation = zeros(MVector{bits(k)+1,Int8})
+    while k>0
+        if k%2==1
+            digit = k % windowsize
+            if digit>=(1<<(w-1)) digit -= windowsize end
+            representation[i] = digit
+            k -= digit
+        end
+        k >>>= 1
+        i += 1
+    end
+    return representation
+end

@@ -203,6 +203,85 @@ function naf_mult(p::ECPointAffine{D,R}, n::Integer) where {D,R}
     return Q
 end
 
+#precompute array of scalar mults of P
+function precompute(P::ECPointAffine{D,R}, n, step) where {D,R}
+    precomp::Array{ECPointAffine{D,R},1} = []
+    Pn = P*step
+    append!(precomp, [P])
+    for i in 2:n
+        append!(precomp, [precomp[i-1]+Pn])
+    end
+    return precomp
+end
+
+#Guide to ECC, algorithm 3.36
+#Window NAF method for point multiplication
+function naf_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+    if w==1 return naf_mult(P, k) end
+    naf_k = naf(k, w)
+
+    precomp = precompute(P, 1<<(w-2), 2)
+
+    Q = zero(ECPointAffine{D,R}, P.ec)
+    for i in length(naf_k):-1:1
+        Q = double(Q)
+        if naf_k[i]>0
+            Q += precomp[naf_k[i]>>1+1]
+        elseif naf_k[i]<0
+            Q -= precomp[(-naf_k[i])>>1+1]
+        end
+    end
+    return Q
+end
+
+
+#Guide to ECC, algorithm 3.38
+#Window NAF method for point multiplication
+function sliding_naf_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+    (adds, subs, l) = naf(k)
+
+    #make this size  more accurate
+    precomp = precompute(P, 1<<(w-1), 2)
+
+    Q = zero(ECPointAffine{D,R}, P.ec)
+    i = l-1
+    while i>=0
+        if (adds>>i)&1==0 && (subs>>i)&1==0
+            t, u = 1, 0
+        else
+            t = w
+            while t>0
+                if (adds>>(i-t+1))&1==1 || (subs>>(i-t+1))&1==1 break end
+                t -= 1
+            end
+            u = (adds>>>(i-t+1)) & (1<<t -1)
+            u -= (subs>>>(i-t+1)) & (1<<t -1)
+        end
+
+        for j in 1:t Q = double(Q) end
+
+        if u>0 Q += precomp[u÷2+1]
+        elseif u<0 Q -= precomp[(-u)÷2+1]
+        end
+
+        i -= t
+    end
+    return Q
+end
+
+#windowed scalar mult, left to right
+function window_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+    l = bits(k)
+    precomp = precompute(P, 1<<w -1, 1)
+    Q = zero(ECPointAffine{D,R}, P.ec)
+    for i in (l-(l%w)):-w:0
+        for j in 1:w Q = double(Q) end
+        n = (k>>i)&(1<<w -1)
+        if n>0 Q += precomp[n] end
+    end
+    return Q
+end
+
 """
     isvalid(p::ECPointAffine)
 Returns true if ``p`` is a point on the elliptic curve that it is associated with.
