@@ -12,26 +12,24 @@ using StaticArrays: MVector
 
 #on a 32 bit system, these will be UInt32 and 32 respectively
 #and on a 64bit system they will be UInt64 and 64
-macro wordtype()
-    return UInt
-end
-macro wordsize()
-    return 8*sizeof(UInt)
-end
+macro wordtype() return UInt end
+macro wordsize() return 8*sizeof(UInt) end
 
-include("StaticUInt.jl")
-include("BField_StaticUInt.jl")
-if @wordsize()==64 include("BField_fastreduce64.jl")
-elseif @wordsize()==32 include("BField_fastreduce32.jl")
+include("GaloisFields\\StaticUInt.jl")
+include("GaloisFields\\BField.jl")
+if @wordsize()==64 include("GaloisFields\\BField_fastreduce64.jl")
+elseif @wordsize()==32 include("GaloisFields\\BField_fastreduce32.jl")
 end
-include("PField_BigInt.jl")
-include("EC.jl")
-include("ECAffine.jl")
-include("ECLD.jl")
-include("ECJacobian.jl")
-include("ECMix.jl")
-include("CurveDomainParams.jl")
-include("Crypto.jl")
+include("GaloisFields\\PField.jl")
+
+include("EllipticCurves\\EC.jl")
+include("EllipticCurves\\ECAffine.jl")
+include("EllipticCurves\\ECLD.jl")
+include("EllipticCurves\\ECJacobian.jl")
+include("EllipticCurves\\ECMix.jl")
+
+include("Cryptography\\CurveDomainParams.jl")
+include("Cryptography\\Crypto.jl")
 
 export
     BFieldPoint,
@@ -52,6 +50,9 @@ export
     *,
     mont_pow_ladder,
     naf_mult,
+    sliding_naf_mult,
+    window_mult,
+    naf,
     /,
     inv,
     ^,
