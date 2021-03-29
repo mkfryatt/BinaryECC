@@ -30,8 +30,6 @@ function ECPointAffine(s::String, ec::EC{D,R}) where {D,R}
         throw(ArgumentError("Octet string must start with '04'."))
     end
 
-    #TODO handle compressed format
-
     x = BFieldPoint{D,R}(s[3:4+2*floor(Int16, D / 8)])
     y = BFieldPoint{D,R}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
 
@@ -124,7 +122,7 @@ function *(p::ECPointAffine{D,R}, n::Integer) where {D,R}
 end
 
 """
-    mont_pow_ladder(p::ECPointAffine{D,R}, n::Integer) where {D,R}
+    mult_mont_affine(p::ECPointAffine{D,R}, n::Integer) where {D,R}
 Returns ``p \\cdot n``.
 
 More resistant to timing attacks than the standard double and add algorithm.
@@ -132,7 +130,7 @@ More resistant to timing attacks than the standard double and add algorithm.
 Fast Multiplication on Elliptic Curves over ``GF(2^m)`` without Precomputation,
 Algorithm 2A: Montgomery Scalar Multiplication.
 """
-function mont_pow_ladder(p::ECPointAffine{D,R}, n::T) where {D,R} where T<:Integer
+function mult_mont_affine(p::ECPointAffine{D,R}, n::T) where {D,R} where T<:Integer
     if n==0 || iszero(p) return p end
     if n<0 return mont_pow_ladder(-p, -n) end
 
@@ -183,13 +181,13 @@ function find_point(x1::BFieldPoint{D,R}, x2::BFieldPoint{D,R}, p::ECPointAffine
 end
 
 """
-    naf_mult(p::ECPointAffine{D,R}, n::Integer) where {D,R}
+    mult_naf(p::ECPointAffine{D,R}, n::Integer) where {D,R}
 Returns ``p \\cdot n``.
 
 Uses the binary NAF multiplication method described in Guide to Elliptic Curve Cryptography,
 algorithm 3.31.
 """
-function naf_mult(p::ECPointAffine{D,R}, n::Integer) where {D,R}
+function mult_naf(p::ECPointAffine{D,R}, n::Integer) where {D,R}
     (adds, subs, l) = naf(n)
     Q = zero(ECPointAffine{D,R}, p.ec)
     for i in (l-1):-1:0
@@ -216,8 +214,8 @@ end
 
 #Guide to ECC, algorithm 3.36
 #Window NAF method for point multiplication
-function naf_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
-    if w==1 return naf_mult(P, k) end
+function mult_naf(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+    if w==1 return mult_naf(P, k) end
     naf_k = naf(k, w)
 
     precomp = precompute(P, 1<<(w-2), 2)
@@ -237,7 +235,7 @@ end
 
 #Guide to ECC, algorithm 3.38
 #Window NAF method for point multiplication
-function sliding_naf_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+function mult_naf_window(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
     (adds, subs, l) = naf(k)
 
     #make this size  more accurate
@@ -270,7 +268,7 @@ function sliding_naf_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
 end
 
 #windowed scalar mult, left to right
-function window_mult(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+function mult_window(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
     l = bits(k)
     precomp = precompute(P, 1<<w -1, 1)
     Q = zero(ECPointAffine{D,R}, P.ec)

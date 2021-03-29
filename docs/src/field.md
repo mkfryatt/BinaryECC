@@ -30,21 +30,21 @@ sqrt(a::BFieldPoint{D,R}) where {D,R}
 
 ### Multiplication
 ```@docs
-right_to_left_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+mult_shiftandadd(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, w=0) where {D,R}
 
-threads_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+mult_threaded(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 
-noreduce_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+mult_ownreduce(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 
-right_to_left_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+mult_comb_rtl(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 
-left_to_right_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+mult_comb_ltr(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 
-window_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int) where {D,R}
+mult_comb_window(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int) where {D,R}
 
 square(a::BFieldPoint{D,R}) where {D,R}
 
-window_square(a::BFieldPoint{D,R}, window::Int) where {D,R}
+square_window(a::BFieldPoint{D,R}, window::Int) where {D,R}
 ```
 
 ### Miscellaneous Arithmetic

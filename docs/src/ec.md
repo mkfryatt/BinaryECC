@@ -37,9 +37,11 @@ repr(ec::EC)
 
 ### Scalar Point Multiplication
 ```@docs
-mont_pow_ladder
+mult_mont_general
 
-naf_mult(p::ECPointAffine{D,R}, n::Integer) where {D,R}
+mult_mont_affine
+
+mult_naf(p::ECPointAffine{D,R}, n::Integer) where {D,R}
 ```
 
 ### Additive Identity

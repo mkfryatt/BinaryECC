@@ -27,7 +27,7 @@ ecdsa_verify(T::CurveDomainParams{D,R}, Q::ECPointAffine{D,R}, sig::ECDSASignatu
 
 ## ECDH
 ```@docs
-ecdh_calculate(T::CurveDomainParams{D,R}, dU::BigInt, QV::ECPointAffine{D,R}) where {D,R}
+ecdh_calculate(T::CurveDomainParams{D,R}, dU::PFieldPoint, QV::ECPointAffine{D,R}) where {D,R}
 
 ecdh_deployment1(T::CurveDomainParams)
 

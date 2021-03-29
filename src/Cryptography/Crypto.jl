@@ -143,7 +143,7 @@ end
 #sec1 v2, 3.3.1
 #Elliptic Curve Diffie Hellman Primitive
 """
-    ecdh_calculate(T::CurveDomainParams{D,R}, dU::BigInt, QV::ECPointAffine{D,R}) where {D,R}
+    ecdh_calculate(T::CurveDomainParams{D,R}, dU::PFieldPoint, QV::ECPointAffine{D,R}) where {D,R}
 Calculates the shared secret value for entity "U"'s private key
  (``\\textit{dU}``) and entity "V"'s public key (``\\textit{QV}``), which are
  associated with curve domain parameters ``T``.

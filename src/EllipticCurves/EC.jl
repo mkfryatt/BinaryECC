@@ -65,11 +65,11 @@ function *(p::AbstractECPoint, n::PFieldPoint)
 end
 
 """
-    mont_pow_ladder(p::AbstractECPoint, n::Integer)
+    mult_mont_general(p::AbstractECPoint, n::Integer)
 Performs ``p \\cdot n`` with a fixed sequence of curve and field operations.
 More resistant to timing attacks than the standard double and add algorithm.
 """
-function mont_pow_ladder(p::AbstractECPoint, n::Integer)
+function mult_mont_general(p::AbstractECPoint, n::Integer)
     R0 = p
     R1 = double(p)
     for i in (bits(n)-2):-1:0

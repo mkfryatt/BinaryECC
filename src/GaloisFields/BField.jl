@@ -75,6 +75,8 @@ end
 Returns the least element ``b``, such that ``a \\equiv b \\pmod{R}``.
 """
 function reduce(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+    #return fastreduce(a)
+
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
     b = copy(a.value)
@@ -99,14 +101,15 @@ Returns a new element (of the binary field represented by {D,R}) which is the
  result of ``a \\cdot b``.
 """
 function *(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
-    return window_shift_and_add_mult(a, b, 4)
+    return mult_shiftandadd(a, b, 4)
 end
 
 """
-    right_to_left_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+    mult_shiftandadd(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 Returns ``a \\cdot b`` using the right to left shift and add method.
 """
-function right_to_left_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+function mult_shiftandadd(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, w=0)::BFieldPoint{D,R} where {D,R}
+    if w!=0 return mult_shiftandadd_window(a, b, w) end
     if a.value==b.value return square(a) end
 
     #c needs to store a polynomial of degree 2D
@@ -121,7 +124,7 @@ function right_to_left_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoi
     return reduce(BFieldPoint{D,R}(c))
 end
 
-function window_shift_and_add_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
+function mult_shiftandadd_window(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
     Bu = [small_mult(b, u) for u=0:(1<<window -1)]
@@ -138,10 +141,10 @@ function window_shift_and_add_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, win
 end
 
 """
-    threads_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+    mult_threaded(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 Returns ``a \\cdot b`` using the right to left shift and add method with multithreading.
 """
-function threads_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+function mult_threaded(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
     #cs needs to store polynomials of degree 2D
@@ -158,11 +161,11 @@ function threads_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R
 end
 
 """
-    noreduce_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+    mult_ownreduce(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 Returns ``a \\cdot b`` using the right to left shift and add method,
 without needing to call a reduction function.
 """
-function noreduce_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+function mult_ownreduce(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
     L = ceil(Int,D/@wordsize())
@@ -185,11 +188,11 @@ function noreduce_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,
 end
 
 """
-    right_to_left_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+    mult_comb_rtl(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 Returns ``a \\cdot b`` using a right to left comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.34).
 """
-function right_to_left_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+function mult_comb_rtl(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
     L = ceil(Int,D/@wordsize())
@@ -213,11 +216,12 @@ function right_to_left_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFie
 end
 
 """
-    left_to_right_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
+    mult_comb_ltr(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}) where {D,R}
 Returns ``a \\cdot b`` using a left to right comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
 """
-function left_to_right_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+function mult_comb_ltr(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, w=0)::BFieldPoint{D,R} where {D,R}
+    if w!=0 return mult_comb_window(a, b, w) end
     if a.value==b.value return square(a) end
 
     L = ceil(Int,D/@wordsize())
@@ -236,13 +240,13 @@ function left_to_right_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R})::BFie
 end
 
 """
-    window_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int) where {D,R}
+    mult_comb_window(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int) where {D,R}
 Returns ``a \\cdot b`` using a left to right comb method windowing
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.36).
 
 Performs best with a window size of 4.
 """
-function window_comb_mult(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
+function mult_comb_window(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
     L = ceil(Int,D/@wordsize())
     Bu = [small_mult(b, u) for u=0:(1<<window -1)]
     c = zero(StaticUInt{2*L,@wordtype()})
@@ -285,7 +289,7 @@ function square(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
 end
 
 #adds a zero between every digit of the original
-function standard_square(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
+function square_standard(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
     b = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
     for i in 0:(D-1)
         if getbit(a.value,i)==1
@@ -297,11 +301,11 @@ function standard_square(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
 end
 
 """
-    window_square(a::BFieldPoint{D,R}, window::Int) where {D,R}
+    square_window(a::BFieldPoint{D,R}, window::Int) where {D,R}
 Returns ``a^2`` by inserting a zero between every bit in the original, using
 the specified window size.
 """
-function window_square(a::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
+function square_window(a::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
     b = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
     spread = [StaticUInt{1,@wordtype()}(spread_bits(i)) for i=0:(1<<window -1)]
 
