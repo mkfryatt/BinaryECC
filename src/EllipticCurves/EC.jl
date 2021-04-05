@@ -7,10 +7,10 @@ struct ECMismatchException <: Exception end
 
 
 """
-    AbstractECPoint
+    AbstractECPoint{D,R}
 Abstract type for points on an elliptic curve.
 """
-abstract type AbstractECPoint end
+abstract type AbstractECPoint{D,R} end
 
 """
     EC{D,R}
@@ -48,7 +48,7 @@ end
     -(p1::AbstractECPoint, p2::AbstractECPoint)
 Returns ``p_1-p_2``.
 """
-function -(p1::AbstractECPoint, p2::AbstractECPoint)
+function -(p1::AbstractECPoint{D,R}, p2::AbstractECPoint{D,R}) where {D,R}
     return p1 + (-p2)
 end
 

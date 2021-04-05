@@ -1,11 +1,11 @@
 """
-    ECPointAffine{D,R} <: AbstractECPoint
+    ECPointAffine{D,R} <: AbstractECPoint{D,R}
 Represents a point on an elliptic curve over the field represented by D and R.
 Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
 
 ``E: y^2 +  xy = x^3 + ax^2 + b``
 """
-struct ECPointAffine{D,R} <: AbstractECPoint
+struct ECPointAffine{D,R} <: AbstractECPoint{D,R}
     x::BFieldPoint{D,R}
     y::BFieldPoint{D,R}
     ec::EC{D,R}

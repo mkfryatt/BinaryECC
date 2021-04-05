@@ -1,5 +1,5 @@
 """
-    ECPointJacobian{D,R} <: AbstractECPoint
+    ECPointJacobian{D,R} <: AbstractECPoint{D,R}
 Represents a point on an elliptic curve over the field represented by D and R.
 Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on.
 
@@ -9,7 +9,7 @@ Each point ``(x, y)`` on the curve is represented by a set of equivalent Jacobia
 ``\\{(\\lambda^2 x, \\lambda^3 y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
-struct ECPointJacobian{D,R} <: AbstractECPoint
+struct ECPointJacobian{D,R} <: AbstractECPoint{D,R}
     x::BFieldPoint{D,R}
     y::BFieldPoint{D,R}
     z::BFieldPoint{D,R}

@@ -1,5 +1,5 @@
 """
-    ECPointLD{D,R} <: AbstractECPoint
+    ECPointLD{D,R} <: AbstractECPoint{D,R}
 Represents a point on an elliptic curve over the field represented by D and R.
 Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on.
 
@@ -9,7 +9,7 @@ Each (affine) point ``(x, y)`` is represented by a set of Lopez-Dahab points,
 ``\\{(\\lambda x, \\lambda^2 y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
-struct ECPointLD{D,R} <: AbstractECPoint
+struct ECPointLD{D,R} <: AbstractECPoint{D,R}
     x::BFieldPoint{D,R}
     y::BFieldPoint{D,R}
     z::BFieldPoint{D,R}

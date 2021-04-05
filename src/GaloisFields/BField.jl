@@ -285,7 +285,7 @@ Returns a new element (of the binary field represented by {D,R}) which is the
 result of ``a^2``.
 """
 function square(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
-    return window_square(a, 4)
+    return square_window(a, 4)
 end
 
 #adds a zero between every digit of the original
