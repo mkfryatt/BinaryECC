@@ -19,6 +19,10 @@ function StaticUInt{L,T}(value::Integer)::StaticUInt{L,T} where {L,T}
     return StaticUInt{L,T}(valuevector)
 end
 
+function StaticUInt{L,T}(value::Array{T,1})::StaticUInt{L,T} where {L,T}
+    return StaticUInt{L,T}(MVector{L,T}(value[1:L]))
+end
+
 #sec1v2 2.3.6
 #create a staticuint from a hex string
 function StaticUInt{L,T}(s::String)::StaticUInt{L,T} where {L,T}

@@ -236,6 +236,7 @@ end
 #Guide to ECC, algorithm 3.38
 #Window NAF method for point multiplication
 function mult_naf_window(P::ECPointAffine{D,R}, k::Integer, w::Int) where {D,R}
+    if w==1 return mult_naf(P, k) end
     (adds, subs, l) = naf(k)
 
     #make this size  more accurate
