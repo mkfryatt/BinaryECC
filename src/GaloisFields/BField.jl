@@ -75,8 +75,6 @@ end
 Returns the least element ``b``, such that ``a \\equiv b \\pmod{R}``.
 """
 function reduce(a::BFieldPoint{D,R})::BFieldPoint{D,R} where {D,R}
-    #return fastreduce(a)
-
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
     b = copy(a.value)
@@ -127,7 +125,7 @@ end
 function mult_shiftandadd_window(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)::BFieldPoint{D,R} where {D,R}
     if a.value==b.value return square(a) end
 
-    Bu = [small_mult(b, u) for u=0:(1<<window -1)]
+    Bu = [small_mult(b, u) for u::UInt8=UInt8(0):(UInt8(1)<<window -1)]
 
     #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/@wordsize()),@wordtype()})
@@ -264,11 +262,10 @@ function mult_comb_window(a::BFieldPoint{D,R}, b::BFieldPoint{D,R}, window::Int)
     return reduce(BFieldPoint{D,R}(c))
 end
 
-#used for window_comb_mult
-function small_mult(a::BFieldPoint{D,R}, b::Int)::StaticUInt where {D,R}
-    blen = 8*sizeof(b)
-    maxlen = D + blen
-    c = zero(StaticUInt{ceil(Int,maxlen/@wordsize()),@wordtype()})
+function small_mult(a::BFieldPoint{D,R}, b::UInt8)::StaticUInt{((D+8) ÷ @wordsize()) +1,@wordtype()} where {D,R}
+    blen = 8
+    newL = ((D+blen) ÷ @wordsize()) +1
+    c = zero(StaticUInt{newL,@wordtype()})
 
     for i in 0:(blen-1)
         if (b>>i)&1==1

@@ -10,16 +10,12 @@ import Base:
 using SHA: sha256
 using StaticArrays: MVector
 
-#on a 32 bit system, these will be UInt32 and 32 respectively
-#and on a 64bit system they will be UInt64 and 64
-macro wordtype() return UInt end
-macro wordsize() return 8*sizeof(UInt) end
+macro wordtype() return UInt64 end
+macro wordsize() return 8*sizeof(@wordtype()) end
 
 include("GaloisFields\\StaticUInt.jl")
 include("GaloisFields\\BField.jl")
-if @wordsize()==64 include("GaloisFields\\BField_fastreduce64.jl")
-elseif @wordsize()==32 include("GaloisFields\\BField_fastreduce32.jl")
-end
+include("GaloisFields\\BField_fastreduce64.jl")
 include("GaloisFields\\PField.jl")
 
 include("EllipticCurves\\EC.jl")

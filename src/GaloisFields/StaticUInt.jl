@@ -75,10 +75,11 @@ function getbit(x::StaticUInt{L,T}, i::Int)::Int where {L,T}
     return x.value[block]>>bit & 1
 end
 
+#TODO doesn't work over block boundaries?
 function getbits(x::StaticUInt{L,T}, start::Int, len::Int)::Int where {L,T}
     blocksize = sizeof(T)*8
     bit = start%blocksize
-    block = (start÷(8*sizeof(T))) +1
+    block = (start÷blocksize) +1
     if block>L return 0 end
     bitmask = (1<<len) -1
     return (x.value[block]>>bit) & bitmask
@@ -88,7 +89,7 @@ end
 function flipbit!(x::StaticUInt{L,T}, i::Integer) where {L,T}
     blocksize = sizeof(T)*8
     bit = i%blocksize
-    block = (i÷(8*sizeof(T))) +1
+    block = (i÷blocksize) +1
     if block>L
         throw(ArgumentError("Cannot flip bit beyond the size of the number."))
     end
@@ -225,12 +226,8 @@ end
 
 function shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Int)::Nothing where {L1,L2,T}
     if shift<0 throw(ArgumentError("Cannot shift by a negative amount")) end
-
-    #if shift is zero, this is just xor that doesn't perform a copy
     if shift==0
-        for i in 1:min(L1, L2)
-            x.value[i] ⊻= y.value[i]
-        end
+        xor!(x, y)
         return
     end
 
