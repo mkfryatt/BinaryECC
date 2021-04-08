@@ -255,6 +255,7 @@ function shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Int)::Noth
         x.value[L1] ⊻= (y.value[L2]&lowermask)<<upperbits
     elseif L2+blockshift>L1
         top = L1-blockshift-1
+        x.value[L1] ⊻= (y.value[L2-blockshift]&lowermask)<<upperbits
     end
     for block in 1:top
         x.value[block+blockshift] ⊻= (y.value[block]&lowermask)<<upperbits

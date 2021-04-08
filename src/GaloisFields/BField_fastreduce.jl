@@ -41,7 +41,6 @@ macro fastreduce(D,R)
     text *= """b.value[$lastword] &= ($wordtype(1)<<$extra)-1
             return BFieldPoint{$D,$R}(changelength(b, $lastword))
             end"""
-
     return eval(Meta.parse(text))
 end
 

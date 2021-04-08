@@ -15,7 +15,7 @@ macro wordsize() return 8*sizeof(@wordtype()) end
 
 include("GaloisFields\\StaticUInt.jl")
 include("GaloisFields\\BField.jl")
-include("GaloisFields\\BField_fastreduce64.jl")
+include("GaloisFields\\BField_fastreduce.jl")
 include("GaloisFields\\PField.jl")
 
 include("EllipticCurves\\EC.jl")
