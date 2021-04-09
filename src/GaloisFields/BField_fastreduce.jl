@@ -13,7 +13,7 @@ macro fastreduce(D,R)
     end
     prepend!(indices, [D_val])
 
-    lastword = (D_val ÷ @wordsize) +1
+    lastword = (D_val ÷ @wordsize()) +1
     wordsize = @wordsize()
     wordtype = @wordtype()
     extra = D_val % @wordsize()
