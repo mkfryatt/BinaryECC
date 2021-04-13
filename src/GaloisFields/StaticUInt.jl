@@ -230,6 +230,10 @@ function shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Int)::Noth
         xor!(x, y)
         return
     end
+    if shift%@wordsize()==0
+        word_shiftedxor!(x, y, shift ÷ @wordsize())
+        return
+    end
 
     blocksize = 8*sizeof(T)
     blockshift = shift ÷ blocksize
@@ -260,6 +264,17 @@ function shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Int)::Noth
     for block in 1:top
         x.value[block+blockshift] ⊻= (y.value[block]&lowermask)<<upperbits
         x.value[block+blockshift+1] ⊻= (y.value[block]>>lowerbits)&uppermask
+    end
+end
+
+#shift by an entire word at a time
+function word_shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, wordshift::Int)::Nothing where {L1,L2,T}
+    top = L2
+    if L2+wordshift>L1
+        top = L1-wordshift
+    end
+    for block in 1:top
+        x.value[block+wordshift] ⊻= y.value[block]
     end
 end
 
