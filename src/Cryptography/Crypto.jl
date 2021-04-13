@@ -213,11 +213,3 @@ function ecdh_agreement(T::CurveDomainParams{D,R}, ukey::ECKeyPair{D,R}, QV::ECP
     #4
     return K
 end
-
-
-function gen_save_keypair(T::CurveDomainParams{D,R}) where {D,R}
-    key::ECKeyPair{D,R} = generate_keypair(T)
-    open("test.txt", "w") do io
-        write(io, repr(key))
-    end
-end
