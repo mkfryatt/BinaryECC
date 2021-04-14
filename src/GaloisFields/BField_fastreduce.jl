@@ -13,33 +13,30 @@ macro fastreduce(D,R)
     end
     prepend!(indices, [D_val])
 
-    lastword = (D_val ÷ @wordsize()) +1
-    wordsize = @wordsize()
-    wordtype = @wordtype()
-    extra = D_val % @wordsize()
-
     text = """
-    function reduce(a::BFieldPoint{$D,$R})::BFieldPoint{$D,$R}
-        b::StaticUInt{length(a.value),$wordtype} = copy(a.value)
-        for i in length(b):-1:(1+$lastword)
-            t = StaticUInt{1,$wordtype}([b.value[i]])
+    function reduce(a::BFieldPoint{$D,$R,T})::BFieldPoint{$D,$R,T} where T
+        b::StaticUInt{length(a.value),T} = copy(a.value)
+        lastword = ($D ÷ bitsize(T)) +1
+        for i in length(b):-1:(1+lastword)
+            t = StaticUInt{1,T}([b.value[i]])
     """
 
     for i in indices
-        text *= "shiftedxor!(b, t, $wordsize*(i-1)-$D+$i)\n"
+        text *= "shiftedxor!(b, t, bitsize(T)*(i-1)-$D+$i)\n"
     end
 
     text *= """end
-            t = StaticUInt{1,$wordtype}([b.value[$lastword]])
-            t.value[1] >>>= $extra
+            t = StaticUInt{1,T}([b.value[lastword]])
+            extra = $D % bitsize(T)
+            t.value[1] >>>= extra
             """
 
     for i in indices
         text *= "shiftedxor!(b, t, $i)\n"
     end
 
-    text *= """b.value[$lastword] &= ($wordtype(1)<<$extra)-1
-            return BFieldPoint{$D,$R}(changelength(b, $lastword))
+    text *= """b.value[lastword] &= (T(1)<<extra)-1
+            return BFieldPoint{$D,$R,T}(changelength(b, lastword))
             end"""
     return eval(Meta.parse(text))
 end

@@ -10,22 +10,21 @@ import Base:
 using SHA: sha256
 using StaticArrays: MVector
 
-macro wordtype() return UInt64 end
-macro wordsize() return 8*sizeof(@wordtype()) end
+bitsize(T) = 8*sizeof(T)
 
-include("GaloisFields\\StaticUInt.jl")
-include("GaloisFields\\BField.jl")
-include("GaloisFields\\BField_fastreduce.jl")
-include("GaloisFields\\PField.jl")
+include("GaloisFields/StaticUInt.jl")
+include("GaloisFields/BField.jl")
+include("GaloisFields/BField_fastreduce.jl")
+include("GaloisFields/PField.jl")
 
-include("EllipticCurves\\EC.jl")
-include("EllipticCurves\\ECAffine.jl")
-include("EllipticCurves\\ECLD.jl")
-include("EllipticCurves\\ECJacobian.jl")
-include("EllipticCurves\\ECMix.jl")
+include("EllipticCurves/EC.jl")
+include("EllipticCurves/ECAffine.jl")
+include("EllipticCurves/ECLD.jl")
+include("EllipticCurves/ECJacobian.jl")
+include("EllipticCurves/ECMix.jl")
 
-include("Cryptography\\CurveDomainParams.jl")
-include("Cryptography\\Crypto.jl")
+include("Cryptography/CurveDomainParams.jl")
+include("Cryptography/Crypto.jl")
 
 export
     BFieldPoint,

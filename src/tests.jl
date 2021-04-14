@@ -1,10 +1,10 @@
-include("..\\testvectors\\test.jl")
+include("../testvectors/test.jl")
 
 using Test
 
 @testset "Binary Field" begin
-    x = random(BFieldPoint163)
-    y = random(BFieldPoint163)
+    x = random(BFieldPoint163{UInt})
+    y = random(BFieldPoint163{UInt})
     @test x*y == y*x #test commutativity for mult
     @test x+y == y+x #test commutativity for add
     @test iszero(x+x) #test doubling
@@ -15,8 +15,9 @@ using Test
 end
 
 @testset "Prime Field" begin
-    x = random(PFieldPoint, SECT163K1.n)
-    y = random(PFieldPoint, SECT163K1.n)
+    sect163k1 = SECT163K1(UInt)
+    x = random(PFieldPoint, sect163k1.n)
+    y = random(PFieldPoint, sect163k1.n)
     @test x*y == y*x #test commutativity for mult
     @test x+y == y+x #test commutativity for add
     @test x^5 == x*x*x*x*x #test exponentiation for an odd power
@@ -26,8 +27,10 @@ end
 end
 
 @testset "Elliptic Curve" begin
-    G = SECT163K1.G
-    G_other = SECT163R2.G
+    sect163k1 = SECT163K1(UInt)
+    G = sect163k1.G
+    sect163r2 = SECT163R2(UInt)
+    G_other = sect163r2.G
     O = zero(typeof(G), G.ec)
     @test iszero(O) #test additive identity is correct
     @test G-G == O #test subtraction
@@ -43,7 +46,8 @@ end
 end
 
 @testset "Jacobian Coordinates" begin
-    G = SECT163K1.G
+    sect163k1 = SECT163K1(UInt)
+    G = sect163k1.G
     G_J = convert(ECPointJacobian, G)
     @test G == G_J #test the conversion worked
     @test G_J*2 == G*2 #test doubling
@@ -51,7 +55,8 @@ end
 end
 
 @testset "Lopez-Dahab Coordinates" begin
-    G = SECT163K1.G
+    sect163k1 = SECT163K1(UInt)
+    G = sect163k1.G
     G_LD = convert(ECPointLD, G)
     @test G == G_LD #test the conversion worked
     @test G_LD*2 == G*2 #test doubling
@@ -61,22 +66,24 @@ end
 @testset "ECDSA" begin
     msg1 = "message 1"
     msg2 = "message 2"
-    ukey = generate_keypair(SECT163K1)
-    vkey = generate_keypair(SECT163K1)
+    sect163k1 = SECT163K1(UInt)
+    ukey = generate_keypair(sect163k1)
+    vkey = generate_keypair(sect163k1)
     @test ukey != vkey
-    sig1_real = ecdsa_sign(SECT163K1, ukey, msg1)
-    sig1_fake = ecdsa_sign(SECT163K1, vkey, msg1)
+    sig1_real = ecdsa_sign(sect163k1, ukey, msg1)
+    sig1_fake = ecdsa_sign(sect163k1, vkey, msg1)
     @test sig1_real!=sig1_fake
-    @test ecdsa_verify(SECT163K1, ukey.Q, sig1_real, msg1)
-    @test !ecdsa_verify(SECT163K1, ukey.Q, sig1_fake, msg1)
-    @test !ecdsa_verify(SECT163K1, ukey.Q, sig1_fake, msg2)
+    @test ecdsa_verify(sect163k1, ukey.Q, sig1_real, msg1)
+    @test !ecdsa_verify(sect163k1, ukey.Q, sig1_fake, msg1)
+    @test !ecdsa_verify(sect163k1, ukey.Q, sig1_fake, msg2)
 end
 
 @testset "ECDH" begin
-    u1 = ecdh_deployment1(SECT163K1)
-    v1 = ecdh_deployment1(SECT163K1)
+    sect163k1 = SECT163K1(UInt)
+    u1 = ecdh_deployment1(sect163k1)
+    v1 = ecdh_deployment1(sect163k1)
     @test u1!=v1
-    @test ecdh_deployment2(SECT163K1, v1.Q)
-    @test ecdh_deployment2(SECT163K1, u1.Q)
-    @test ecdh_agreement(SECT163K1, u1, v1.Q)==ecdh_agreement(SECT163K1, v1, u1.Q)
+    @test ecdh_deployment2(sect163k1, v1.Q)
+    @test ecdh_deployment2(sect163k1, u1.Q)
+    @test ecdh_agreement(sect163k1, u1, v1.Q)==ecdh_agreement(sect163k1, v1, u1.Q)
 end

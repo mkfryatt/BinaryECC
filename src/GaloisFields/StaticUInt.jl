@@ -230,8 +230,8 @@ function shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Int)::Noth
         xor!(x, y)
         return
     end
-    if shift%@wordsize()==0
-        word_shiftedxor!(x, y, shift ÷ @wordsize())
+    if shift%bitsize(T)==0
+        word_shiftedxor!(x, y, shift ÷ bitsize(T))
         return
     end
 

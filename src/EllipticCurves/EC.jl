@@ -7,13 +7,13 @@ struct ECMismatchException <: Exception end
 
 
 """
-    AbstractECPoint{D,R}
+    AbstractECPoint{D,R,T}
 Abstract type for points on an elliptic curve.
 """
-abstract type AbstractECPoint{D,R} end
+abstract type AbstractECPoint{D,R,T} end
 
 """
-    EC{D,R}
+    EC{D,R,T}
 Represents a non-supersingular elliptic curve over the
 field given by D and R.
 
@@ -21,9 +21,9 @@ Contains fields ``a`` and ``b``, where:
 
 ``y^2 + xy = x^3 + ax^2 + b``
 """
-struct EC{D,R}
-    a::BFieldPoint{D,R}
-    b::BFieldPoint{D,R}
+struct EC{D,R,T}
+    a::BFieldPoint{D,R,T}
+    b::BFieldPoint{D,R,T}
 end
 
 """
@@ -36,11 +36,11 @@ function repr(ec::EC)
 end
 
 """
-    ==(ec1::EC{D,R}, ec2::EC{D,R}) where {D,R}
+    ==(ec1::EC{D,R,T}, ec2::EC{D,R,T}) where {D,R,T}
 Two elliptic curves are equal if they have the
 same ``a`` and ``b`` values, and defined over the same field.
 """
-function ==(ec1::EC{D,R}, ec2::EC{D,R}) where {D,R}
+function ==(ec1::EC{D,R,T}, ec2::EC{D,R,T}) where {D,R,T}
     return ec1.a==ec2.a && ec1.b==ec2.b
 end
 
@@ -48,7 +48,7 @@ end
     -(p1::AbstractECPoint, p2::AbstractECPoint)
 Returns ``p_1-p_2``.
 """
-function -(p1::AbstractECPoint{D,R}, p2::AbstractECPoint{D,R}) where {D,R}
+function -(p1::AbstractECPoint{D,R,T}, p2::AbstractECPoint{D,R,T}) where {D,R,T}
     return p1 + (-p2)
 end
 
