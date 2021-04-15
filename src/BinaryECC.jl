@@ -63,11 +63,13 @@ export
 
     #elliptic curve routines
     double,
+    mult_standard,
+    mult_window,
+    mult_bnaf,
+    mult_wnaf,
+    mult_bnaf_window,
     mult_mont_general,
     mult_mont_affine,
-    mult_naf,
-    mult_naf_window,
-    mult_window,
     naf,
 
     #binary field routines

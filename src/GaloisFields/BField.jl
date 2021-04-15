@@ -108,8 +108,8 @@ end
     mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
 Returns ``a \\cdot b`` using the right to left shift and add method.
 """
-function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=0)::BFieldPoint{D,R,T} where {D,R,T}
-    if w!=0 return mult_shiftandadd_window(a, b, w) end
+function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BFieldPoint{D,R,T} where {D,R,T}
+    if w>1 return mult_shiftandadd_window(a, b, w) end
     if a.value==b.value return square(a) end
 
     #c needs to store a polynomial of degree 2D
@@ -220,8 +220,8 @@ end
 Returns ``a \\cdot b`` using a left to right comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
 """
-function mult_comb_ltr(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=0)::BFieldPoint{D,R,T} where {D,R,T}
-    if w!=0 return mult_comb_window(a, b, w) end
+function mult_comb_ltr(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BFieldPoint{D,R,T} where {D,R,T}
+    if w>1 return mult_comb_window(a, b, w) end
     if a.value==b.value return square(a) end
 
     L = ceil(Int,D/bitsize(T))
@@ -338,8 +338,8 @@ function inv(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
     if iszero(a.value) throw(DivideError()) end
 
     L = ceil(Int,D/bitsize(T))
-    u = copy(a.value)
-    v = StaticUInt{L,T}(R)
+    u::StaticUInt{L,T} = copy(a.value)
+    v::StaticUInt{L,T} = StaticUInt{L,T}(R)
     flipbit!(v, D)
     g1 = one(StaticUInt{L,T})
     g2 = zero(StaticUInt{L,T})
@@ -450,12 +450,12 @@ function convert(::Type{BigInt}, a::BFieldPoint)::BigInt
 end
 
 #sec2 v2 (and v1), table 3:
-BFieldPoint113{T} = BFieldPoint{113, UInt16(512+1),T} where T<:Unsigned #v1 only
-BFieldPoint131{T} = BFieldPoint{131, UInt16(256+8+4+1),T} where T<:Unsigned #v1 only
-BFieldPoint163{T} = BFieldPoint{163, UInt16(128+64+8+1),T} where T<:Unsigned
-BFieldPoint193{T} = BFieldPoint{193, (UInt16(1)<<15) + UInt16(1),T} where T<:Unsigned #v1 only
-BFieldPoint233{T} = BFieldPoint{233, (UInt128(1)<<74) + UInt128(1),T} where T<:Unsigned
-BFieldPoint239{T} = BFieldPoint{239, (UInt64(1)<<36) + UInt64(1),T} where T<:Unsigned
-BFieldPoint283{T} = BFieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1),T} where T<:Unsigned
-BFieldPoint409{T} = BFieldPoint{409, (UInt128(1)<<87) + UInt128(1),T} where T<:Unsigned
-BFieldPoint571{T} = BFieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1),T} where T<:Unsigned
+BFieldPoint113{T<:Unsigned} = BFieldPoint{113, UInt16(512+1),T}#v1 only
+BFieldPoint131{T<:Unsigned} = BFieldPoint{131, UInt16(256+8+4+1),T} #v1 only
+BFieldPoint163{T<:Unsigned} = BFieldPoint{163, UInt16(128+64+8+1),T}
+BFieldPoint193{T<:Unsigned} = BFieldPoint{193, (UInt16(1)<<15) + UInt16(1),T} #v1 only
+BFieldPoint233{T<:Unsigned} = BFieldPoint{233, (UInt128(1)<<74) + UInt128(1),T}
+BFieldPoint239{T<:Unsigned} = BFieldPoint{239, (UInt64(1)<<36) + UInt64(1),T}
+BFieldPoint283{T<:Unsigned} = BFieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1),T}
+BFieldPoint409{T<:Unsigned} = BFieldPoint{409, (UInt128(1)<<87) + UInt128(1),T}
+BFieldPoint571{T<:Unsigned} = BFieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1),T}

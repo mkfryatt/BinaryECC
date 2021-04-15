@@ -105,6 +105,10 @@ end
 Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
 """
 function *(p::ECPointAffine{D,R,T}, n::Integer)::ECPointAffine{D,R,T} where {D,R,T}
+    return mult_window(p, n, 4)
+end
+
+function mult_standard(p::ECPointAffine{D,R,T}, n::Integer)::ECPointAffine{D,R,T} where {D,R,T}
     if n<0 return (-p)*(-n) end
     if iszero(p) return p end
     if n==0 return zero(ECPointAffine{D,R,T}, p.ec) end
@@ -187,18 +191,25 @@ Returns ``p \\cdot n``.
 Uses the binary NAF multiplication method described in Guide to Elliptic Curve Cryptography,
 algorithm 3.31.
 """
-function mult_naf(p::ECPointAffine{D,R,T}, n::Integer)::ECPointAffine{D,R,T} where {D,R,T}
-    (adds, subs, l) = naf(n)
-    Q = zero(ECPointAffine{D,R,T}, p.ec)
-    for i in (l-1):-1:0
-        Q = double(Q)
-        if (adds>>i)&1==1
-            Q += p
-        elseif (subs>>i)&1==1
-            Q -= p
+function mult_bnaf(p::ECPointAffine{D,R,T}, n::Integer)::ECPointAffine{D,R,T} where {D,R,T}
+    if n<0 return (-p)*(-n) end
+    if iszero(p) return p end
+    if n==0 return zero(ECPointAffine{D,R,T}, p.ec) end
+    if n==1 return p end
+
+    result = zero(ECPointAffine{D,R,T}, p.ec)
+    while n>0
+        if n&1==1
+            ni = 2 - (n%4)
+            n -= ni
+            if ni==1 result += p
+            else result -= p
+            end
         end
+        p = double(p)
+        n >>= 1
     end
-    return Q
+    return result
 end
 
 #precompute array of scalar mults of P
@@ -214,8 +225,14 @@ end
 
 #Guide to ECC, algorithm 3.36
 #Window NAF method for point multiplication
-function mult_naf(P::ECPointAffine{D,R,T}, k::Integer, w::Int)::ECPointAffine{D,R,T} where {D,R,T}
-    if w==1 return mult_naf(P, k) end
+function mult_wnaf(P::ECPointAffine{D,R,T}, k::Integer, w::Int)::ECPointAffine{D,R,T} where {D,R,T}
+    if w==1 return mult_bnaf(P, k) end
+
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(ECPointAffine{D,R,T}, P.ec) end
+    if k==1 return P end
+
     naf_k = naf(k, w)
 
     precomp = precompute(P, 1<<(w-2), 2)
@@ -232,11 +249,16 @@ function mult_naf(P::ECPointAffine{D,R,T}, k::Integer, w::Int)::ECPointAffine{D,
     return Q
 end
 
-
 #Guide to ECC, algorithm 3.38
 #Window NAF method for point multiplication
-function mult_naf_window(P::ECPointAffine{D,R,T}, k::Integer, w::Int)::ECPointAffine{D,R,T} where {D,R,T}
-    if w==1 return mult_naf(P, k) end
+function mult_bnaf_window(P::ECPointAffine{D,R,T}, k::Integer, w::Int=1)::ECPointAffine{D,R,T} where {D,R,T}
+    if w==1 return mult_bnaf(P, k) end
+
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(ECPointAffine{D,R,T}, P.ec) end
+    if k==1 return P end
+
     (adds, subs, l) = naf(k)
 
     #make this size  more accurate
@@ -269,7 +291,14 @@ function mult_naf_window(P::ECPointAffine{D,R,T}, k::Integer, w::Int)::ECPointAf
 end
 
 #windowed scalar mult, left to right
-function mult_window(P::ECPointAffine{D,R,T}, k::Integer, w::Int)::ECPointAffine{D,R,T} where {D,R,T}
+function mult_window(P::ECPointAffine{D,R,T}, k::Integer, w::Int=1)::ECPointAffine{D,R,T} where {D,R,T}
+    if w==1 return mult_standard(P, k) end
+
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(ECPointAffine{D,R,T}, P.ec) end
+    if k==1 return P end
+
     l = bits(k)
     precomp = precompute(P, 1<<w -1, 1)
     Q = zero(ECPointAffine{D,R,T}, P.ec)
