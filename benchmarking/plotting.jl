@@ -119,33 +119,36 @@ function windowsize_fieldmult()
     return p
 end
 
-function threads()
+function threads(w=1)
     threads_ci, standard_ci = [], []
     x_coords = []
     threads_coords, standard_coords = [], []
 
-    open("benchmarking/threads/threads.txt", "r") do io
+    loc = w==1 ? "threads" : "threads_window"
+
+    open("benchmarking/$loc/$loc.txt", "r") do io
         x_coords = eval(Meta.parse(readline(io)))
-        threads_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
         standard_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
-        threads_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         standard_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        threads_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        threads_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
     end
 
     p = plot(x_coords, threads_coords, yerror=threads_ci,
         size = (300,200),
-        label="Multithreaded",
+        label= w==1  ? "Multithreaded" : "Multithreaded, w=$w",
         xlabel=L"\log_2 \textrm{field size}",
         ylabel=L"\textrm{time} / \mu s")
 
     plot!(p, x_coords, standard_coords, yerror=standard_ci,
         legend= true,
-        label="Single threaded")
+        label= w==1  ? "Single threaded" : "Single threaded, w=$w")
 
-    savefig("benchmarking/threads/threads.tex")
+    savefig("benchmarking/$loc/$loc.tex")
+    savefig("benchmarking/$loc/$loc")
 end
 
-function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Windowsizes", ws=[1,2,4,8])
+function windowsize_scalarmult_dicts(loc="mult_standard", ws=[1,2,4,8])
     groups = [SECT163K1, SECT233K1, SECT283K1, SECT409K1, SECT571K1]
     groups = [group(UInt64) for group in groups]
     x_coords = [log(2, group.n) for group in groups]
@@ -157,18 +160,41 @@ function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Window
             ci[w] = [x/1000000 for x in eval(Meta.parse(readline(io)))]
         end
     end
+    return (x_coords, y_coords, ci)
+end
+function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Windowsizes", ws=[1,2,4,8], wsplot=[1,2,4,8])
+    (x_coords, y_coords, ci) = windowsize_scalarmult_dicts(loc=loc, ws=ws)
 
     p = plot(x_coords, y_coords[1], yerror=ci[1],
-    title = "$title",
-    #size = (300,200),
+    #title = "$title",
+    size = (300,200),
     legend=true,
     label="w=1",
     xlabel=L"\log_2 \textrm{group size}",
     ylabel=L"\textrm{time} / ms")
-    for w in ws
-        plot!(x_coords, y_coords[w], yerror=ci[w], label="w=$w")
+    for w in wsplot[2:length(wsplot)]
+        if w!=1 plot!(x_coords, y_coords[w], yerror=ci[w], label="w=$w") end
     end
     savefig("benchmarking/$loc/$loc.tex")
     savefig("benchmarking/$loc/$loc")
-    return p
+    return (x_coords, y_coords, ci)
+end
+
+function best_scalarmult()
+    (x_coords, daa_y, daa_ci) = windowsize_scalarmult_dicts()
+    (x_coords, bnaf_y, bnaf_ci) = windowsize_scalarmult_dicts("mult_bnaf")
+    (x_coords, wnaf_y, wnaf_ci) = windowsize_scalarmult_dicts("mult_wnaf", [1,2,3,4,5,6,7,8])
+
+    p = plot(x_coords, daa_y[4], yerror=daa_ci[4],
+    size = (300,200),
+    legend=true,
+    label="Double-and-add",
+    xlabel=L"\log_2 \textrm{group size}",
+    ylabel=L"\textrm{time} / ms")
+
+    plot!(x_coords, bnaf_y[4], yerror=bnaf_ci[4], label="Binary NAF")
+    plot!(x_coords, wnaf_y[6], yerror=wnaf_ci[6], label="Width-6 NAF")
+
+    savefig("benchmarking/scalar_mult/scalar_mult.tex")
+    savefig("benchmarking/scalar_mult/scalar_mult")
 end

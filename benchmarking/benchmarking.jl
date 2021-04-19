@@ -104,7 +104,46 @@ function collect_windowsize_fieldmult()
     end
 end
 
-function collect_threads()
+function collect_threads(w=1)
+    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
+    fields = [BFieldPoint113, BFieldPoint131, BFieldPoint163, BFieldPoint193,
+        BFieldPoint233, BFieldPoint239, BFieldPoint283, BFieldPoint409, BFieldPoint571]
+    fields = [f{UInt} for f in fields]
+
+    standard_coords, threaded_coords, standard_ci, threaded_ci = [],[],[],[]
+    for field in fields
+        println("field: $field")
+        if w==1
+            x = "@benchmark mult_shiftandadd(\$(random($field)), \$(random($field)))"
+        else
+            x = "@benchmark mult_shiftandadd_window(\$(random($field)), \$(random($field)), $w)"
+        end
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(standard_coords, [mean(b.times)])
+        append!(standard_ci, [gaussian_ci(std(b.times), length(b.times))])
+        if w==1
+            x = "@benchmark mult_threaded(\$(random($field)), \$(random($field)))"
+        else
+            x = "@benchmark mult_threaded_window(\$(random($field)), \$(random($field)), $w)"
+        end
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(threaded_coords, [mean(b.times)])
+        append!(threaded_ci, [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    loc = w==1 ? "threads" : "threads_window"
+    open("benchmarking/$loc/$loc.txt", "w") do io
+        write(io, "$x_coords\n")
+        write(io, "$standard_coords\n")
+        write(io, "$standard_ci\n")
+        write(io, "$threaded_coords\n")
+        write(io, "$threaded_ci\n")
+    end
+end
+
+function collect_threads_window(w=4)
     x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
     fields = [BFieldPoint113, BFieldPoint131, BFieldPoint163, BFieldPoint193,
         BFieldPoint233, BFieldPoint239, BFieldPoint283, BFieldPoint409, BFieldPoint571]
@@ -113,19 +152,19 @@ function collect_threads()
     for field in fields
         field = field{UInt64}
         println("field: $field")
-        x = "@benchmark mult_shiftandadd(\$(random($field)), \$(random($field)))"
+        x = "@benchmark mult_shiftandadd_window(\$(random($field)), \$(random($field)), $w)"
         x = Meta.parse(x)
         b = eval(x)
         append!(standard_coords, [mean(b.times)])
         append!(standard_ci, [gaussian_ci(std(b.times), length(b.times))])
-        x = "@benchmark mult_threaded(\$(random($field)), \$(random($field)))"
+        x = "@benchmark mult_threaded_window(\$(random($field)), \$(random($field)), $w)"
         x = Meta.parse(x)
         b = eval(x)
         append!(threaded_coords, [mean(b.times)])
         append!(threaded_ci, [gaussian_ci(std(b.times), length(b.times))])
     end
 
-    open("benchmarking/threads/threads.txt", "w") do io
+    open("benchmarking/threads_window/threads_window.txt", "w") do io
         write(io, "$x_coords\n")
         write(io, "$standard_coords\n")
         write(io, "$standard_ci\n")
