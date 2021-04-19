@@ -178,23 +178,23 @@ function mult_threaded_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::I
 
     mid = (length(a.value) ÷ 2)*64 -1
 
-    Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<w -UInt8(1))]
-
-    c1 = Threads.@spawn mult_window_helper($a, $b, $w, 0, $mid, $Bu)
-    c2 = Threads.@spawn mult_window_helper($a, $b, $w, $mid+1, $D-1, $Bu)
+    c1 = Threads.@spawn mult_window_helper($a, $b, $w, 0, $mid)
+    c2 = Threads.@spawn mult_window_helper($a, $b, $w, $mid+1, $D-1)
 
     return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
 end
-function mult_window_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int,
-     start::Int, stop::Int, Bu::Array{StaticUInt{L,T},1})::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T,L}
+function mult_window_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int,
+     start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
     if a.value==b.value return square(a) end
+
+    Bu::Array{StaticUInt{L,T},1} where L = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<w -UInt8(1))]
 
     #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
-    extra = (stop+1-start) % window
-    for i in start:window:(stop-extra)
-        u = getbits(a.value, i, window)
+    extra = (stop+1-start) % w
+    for i in start:w:(stop-extra)
+        u = getbits(a.value, i, w)
         if u!=0 shiftedxor!(c, Bu[u], i) end
     end
 
