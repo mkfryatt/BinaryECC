@@ -139,3 +139,191 @@ function naf(k::Integer, w::Int)
     end
     return representation
 end
+
+"""
+    *(p::AbstractECPoint{D,R,T}, n::Integer) where {D,R,T}
+Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
+"""
+function *(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+    return mult_window(P, k, 4)
+end
+
+function mult_standard(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+
+    Q = zero(typeof(P), P.ec)
+    while k>0
+        if k&1==1
+            Q += P
+        end
+        P = double(P)
+        k >>= 1
+    end
+    return Q
+end
+
+function mult_threaded(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+
+    len = ceil(Int, D/2)
+    k1 = k & (1<<len -1)
+    k2 = k & (1<<len -1)<<len
+
+    Q1 = Threads.@spawn $P*$k1
+    Q2 = Threads.@spawn $P*$k2
+    return fetch(Q1)+fetch(Q2)
+end
+
+#windowed scalar mult, left to right
+function mult_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractECPoint{D,R,T} where {D,R,T}
+    if w==1 return mult_standard(P, k) end
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(typeof(P), P.ec) end
+    if k==1 return P end
+
+    l = bits(k)
+    precomp = precompute(P, 1<<w -1, 1)
+    Q = zero(typeof(P), P.ec)
+    for i in (l-(l%w)):-w:0
+        for j in 1:w Q = double(Q) end
+        n = (k>>i)&(1<<w -1)
+        if n>0 Q += precomp[n] end
+    end
+    return Q
+end
+
+"""
+    mult_naf(p::AbstractECPoint{D,R,T}, n::Integer) where {D,R,T}
+Returns ``p \\cdot n``.
+
+Uses the binary NAF multiplication method described in Guide to Elliptic Curve Cryptography,
+algorithm 3.31.
+"""
+function mult_bnaf(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+
+    Q = zero(typeof(P), P.ec)
+    while k>0
+        if k&1==1
+            t = 2 - (k%4)
+            k -= t
+            if t==1 Q+=P
+            else Q-=P
+            end
+        end
+        P = double(P)
+        k >>= 1
+    end
+    return Q
+end
+
+#Guide to ECC, algorithm 3.38
+#Window NAF method for point multiplication
+function mult_bnaf_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractECPoint{D,R,T} where {D,R,T}
+    if w==1 return mult_bnaf(P, k) end
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(typeof(P), P.ec) end
+    if k==1 return P end
+
+    (adds, subs, l) = naf(k)
+
+    #make this size  more accurate
+    n = (2^w - (-1)^w) ÷ 3
+    precomp = precompute(P, n, 2)# 1<<(w-1), 2)
+
+    Q = zero(typeof(P), P.ec)
+    i = l-1
+    while i>=0
+        if (adds>>i)&1==0 && (subs>>i)&1==0
+            t, u = 1, 0
+        else
+            t = w
+            while t>0
+                if (adds>>(i-t+1))&1==1 || (subs>>(i-t+1))&1==1 break end
+                t -= 1
+            end
+            u = (adds>>>(i-t+1)) & (1<<t -1)
+            u -= (subs>>>(i-t+1)) & (1<<t -1)
+        end
+
+        for j in 1:t Q = double(Q) end
+
+        if u>0 Q += precomp[u÷2+1]
+        elseif u<0 Q -= precomp[(-u)÷2+1]
+        end
+
+        i -= t
+    end
+    return Q
+end
+
+function mult_bnaf_window_test(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractECPoint{D,R,T} where {D,R,T}
+    if w==1 return mult_bnaf(P, k) end
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(typeof(P), P.ec) end
+    if k==1 return P end
+
+    (adds, subs, l) = naf(k)
+
+    #make this size  more accurate
+    n = 2*(2^w - (-1)^w) ÷ 3
+    precomp = precompute(P, n, 1)
+
+    Q = zero(typeof(P), P.ec)
+    for i in (l-(l%w)):-w:0
+        u = (adds>>i)&(1<<w -1)
+        u -= (subs>>i)&(1<<w -1)
+
+        for j in 1:w Q = double(Q) end
+
+        if u>0 Q += precomp[u]
+        elseif u<0 Q -= precomp[-u]
+        end
+
+        i -= w
+    end
+    return Q
+end
+
+#precompute array of scalar mults of P
+function precompute(P::AbstractECPoint{D,R,T}, n::Int, step::Int) where {D,R,T}
+    precomp::Array{typeof(P),1} = []
+    Pn = P*step
+    append!(precomp, [P])
+    for i in 2:n
+        append!(precomp, [precomp[i-1]+Pn])
+    end
+    return precomp
+end
+
+#Guide to ECC, algorithm 3.36
+#Window NAF method for point multiplication
+function mult_wnaf(P::AbstractECPoint{D,R,T}, k::Integer, w::Int)::AbstractECPoint{D,R,T} where {D,R,T}
+    if w==1 return mult_bnaf(P, k) end
+
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+    if k==0 return zero(typeof(P), P.ec) end
+    if k==1 return P end
+
+    naf_k = naf(k, w)
+
+    precomp = precompute(P, 1<<(w-2), 2)
+
+    Q = zero(typeof(P), P.ec)
+    for i in length(naf_k):-1:1
+        Q = double(Q)
+        if naf_k[i]>0
+            Q += precomp[naf_k[i]>>1+1]
+        elseif naf_k[i]<0
+            Q -= precomp[(-naf_k[i])>>1+1]
+        end
+    end
+    return Q
+end

@@ -40,6 +40,9 @@ function BFieldPoint{D,R,T}(s::String) where {D,R,T}
     return BFieldPoint{D,R,T}(value)
 end
 
+function copy(x::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+    return BFieldPoint{D,R,T}(copy(x.value))
+end
 
 """
     ==(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
@@ -101,15 +104,14 @@ Returns a new element (of the binary field represented by {D,R}) which is the
  result of ``a \\cdot b``.
 """
 function *(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    return mult_shiftandadd(a, b, 4)
+    return mult_shiftandadd_window(a, b, 4)
 end
 
 """
     mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
 Returns ``a \\cdot b`` using the right to left shift and add method.
 """
-function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BFieldPoint{D,R,T} where {D,R,T}
-    if w>1 return mult_shiftandadd_window(a, b, w) end
+function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
     if a.value==b.value return square(a) end
 
     #c needs to store a polynomial of degree 2D
@@ -125,39 +127,84 @@ function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BF
 end
 
 function mult_shiftandadd_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
+    if window==1 return mult_shiftandadd(a, b) end
     if a.value==b.value return square(a) end
 
-    Bu = [small_mult(b, u) for u::UInt8=UInt8(0):(UInt8(1)<<window -1)]
+    Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
 
     #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
-    for i in 0:window:(D-1)
+    notprinted = true
+    for i in 0:window:D-1
         u = getbits(a.value, i, window)
-        shiftedxor!(c, Bu[u+1], i)
+        if u!=0 shiftedxor!(c, Bu[u], i) end
     end
 
     return reduce(BFieldPoint{D,R,T}(c))
+end
+
+function mult_window_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int,
+     start::Int, stop::Int, Bu::Array{StaticUInt{L,T},1})::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T,L}
+    if a.value==b.value return square(a) end
+
+    #c needs to store a polynomial of degree 2D
+    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+
+    extra = (stop+1-start) % window
+    for i in start:window:(stop-extra)
+        u = getbits(a.value, i, window)
+        if u!=0 shiftedxor!(c, Bu[u], i) end
+    end
+
+    i = stop - extra +1
+    u = getbits(a.value, i, extra)
+    if u!=0 shiftedxor!(c, Bu[u], i) end
+
+    return c
+end
+
+function mult_threaded_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
+    if a.value==b.value return square(a) end
+
+    #c needs to store a polynomial of degree 2D
+    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+
+    for i in start:stop
+        if getbit(a.value,i)==1
+            shiftedxor!(c, b.value, i)
+        end
+    end
+
+    return c
 end
 
 """
     mult_threaded(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
 Returns ``a \\cdot b`` using the right to left shift and add method with multithreading.
 """
+function mult_threaded_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int)::BFieldPoint{D,R,T} where {D,R,T}
+    if a.value==b.value return square(a) end
+
+    mid = (length(a.value) ÷ 2)*64 -1
+
+    Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<w -UInt8(1))]
+
+    c1 = Threads.@spawn mult_window_helper($a, $b, $w, 0, $mid, $Bu)
+    c2 = Threads.@spawn mult_window_helper($a, $b, $w, $mid+1, $D-1, $Bu)
+
+    return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
+end
+
 function mult_threaded(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
     if a.value==b.value return square(a) end
 
-    #cs needs to store polynomials of degree 2D
-    cs = [zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T}) for i=1:Threads.nthreads()]
+    mid = (length(a.value) ÷ 2)*64 -1
 
-    Threads.@threads for i in 0:(D-1)
-        if getbit(a.value,i)==1
-            t = Threads.threadid()
-            cs[t] = shiftedxor(cs[t], b.value, i)
-        end
-    end
+    c1 = Threads.@spawn mult_threaded_helper($a, $b, 0, $mid)
+    c2 = Threads.@spawn mult_threaded_helper($a, $b, $mid+1, $D-1)
 
-    return reduce(BFieldPoint{D,R,T}(Base.reduce(⊻,cs)))
+    return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
 end
 
 """
@@ -275,6 +322,16 @@ function small_mult(a::BFieldPoint{D,R,T}, b::UInt8)::StaticUInt{((D+8) ÷ bitsi
         end
     end
 
+    return c
+end
+
+function small_mult(a::StaticUInt{L,T}, b::UInt8)::StaticUInt{L+1,T} where {L,T}
+    c = zero(StaticUInt{L+1,T})
+    for i in 0:(L*bitsize(T))
+        if (b>>i)&1==1
+            shiftedxor!(c, a, i)
+        end
+    end
     return c
 end
 
