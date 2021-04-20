@@ -163,7 +163,7 @@ function windowsize_scalarmult_dicts(loc="mult_standard", ws=[1,2,4,8])
     return (x_coords, y_coords, ci)
 end
 function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Windowsizes", ws=[1,2,4,8], wsplot=[1,2,4,8])
-    (x_coords, y_coords, ci) = windowsize_scalarmult_dicts(loc=loc, ws=ws)
+    (x_coords, y_coords, ci) = windowsize_scalarmult_dicts(loc, ws)
 
     p = plot(x_coords, y_coords[1], yerror=ci[1],
     #title = "$title",
@@ -177,7 +177,6 @@ function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Window
     end
     savefig("benchmarking/$loc/$loc.tex")
     savefig("benchmarking/$loc/$loc")
-    return (x_coords, y_coords, ci)
 end
 
 function best_scalarmult()
@@ -188,11 +187,11 @@ function best_scalarmult()
     p = plot(x_coords, daa_y[4], yerror=daa_ci[4],
     size = (300,200),
     legend=true,
-    label="Double-and-add",
+    label="Double-and-add, w=4",
     xlabel=L"\log_2 \textrm{group size}",
     ylabel=L"\textrm{time} / ms")
 
-    plot!(x_coords, bnaf_y[4], yerror=bnaf_ci[4], label="Binary NAF")
+    plot!(x_coords, bnaf_y[4], yerror=bnaf_ci[4], label="Binary NAF, w=4")
     plot!(x_coords, wnaf_y[6], yerror=wnaf_ci[6], label="Width-6 NAF")
 
     savefig("benchmarking/scalar_mult/scalar_mult.tex")
@@ -224,4 +223,37 @@ function double_threads()
 
     savefig("benchmarking/threads_double/threads_double.tex")
     savefig("benchmarking/threads_double/threads_double")
+end
+
+function mult_mont()
+    threads_ci, standard_ci = [], []
+    x_coords = []
+    threads_coords, standard_coords = [], []
+
+    open("benchmarking/mult_mont/mult_mont.txt", "r") do io
+        x_coords = eval(Meta.parse(readline(io)))
+        standard_coords = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+        standard_ci = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+        threads_coords = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+        threads_ci = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+    end
+
+    (x_coords, wnaf_y, wnaf_ci) = windowsize_scalarmult_dicts("mult_wnaf", [1,2,3,4,5,6,7,8])
+
+    p = plot(x_coords, threads_coords, yerror=threads_ci,
+        size = (300,200),
+        label= "Affine Montgomery powering ladder",
+        xlabel=L"\log_2 \textrm{group size}",
+        ylabel=L"\textrm{time} / ms")
+
+    plot!(p, x_coords, standard_coords, yerror=standard_ci,
+        legend= true,
+        label= "General Montgomery powering ladder")
+
+    plot!(p, x_coords, wnaf_y[6], yerror=wnaf_ci[6],
+        legend= true,
+        label= "Width-6 NAF method")
+
+    savefig("benchmarking/mult_mont/mult_mont.tex")
+    savefig("benchmarking/mult_mont/mult_mont")
 end

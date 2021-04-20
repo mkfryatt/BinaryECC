@@ -299,3 +299,34 @@ function collect_double_threaded()
         write(io, "$threaded_ci\n")
     end
 end
+
+function collect_montmult()
+    groups = [SECT163K1, SECT233K1, SECT283K1, SECT409K1, SECT571K1]
+    groups = [group(UInt64) for group in groups]
+    x_coords = [log(2, group.n) for group in groups]
+
+    standard_coords, threaded_coords, standard_ci, threaded_ci = [],[],[],[]
+    for group in groups
+        println("group: $group\n")
+        G = group.G
+        n = group.n
+        x = "@benchmark mult_mont_general($G, \$(rand(1:$n)) )"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(standard_coords, [mean(b.times)])
+        append!(standard_ci, [gaussian_ci(std(b.times), length(b.times))])
+        x = "@benchmark mult_mont_affine($G, \$(rand(1:$n)) )"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(threaded_coords, [mean(b.times)])
+        append!(threaded_ci, [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    open("benchmarking/mult_mont/mult_mont.txt", "w") do io
+        write(io, "$x_coords\n")
+        write(io, "$standard_coords\n")
+        write(io, "$standard_ci\n")
+        write(io, "$threaded_coords\n")
+        write(io, "$threaded_ci\n")
+    end
+end
