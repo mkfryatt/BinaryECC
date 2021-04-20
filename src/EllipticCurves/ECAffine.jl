@@ -87,6 +87,10 @@ function -(p::ECPointAffine{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
 end
 
 function double(p::ECPointAffine{D,R,T}) where {D,R,T}
+    return double_threaded(p)
+end
+
+function double_standard(p::ECPointAffine{D,R,T}) where {D,R,T}
     if iszero(p) return p end
     if p==-p return zero(ECPointAffine{D,R,T}, p.ec) end
 
@@ -97,6 +101,18 @@ function double(p::ECPointAffine{D,R,T}) where {D,R,T}
     lambda = p.x + (p.y / p.x)
     x_new = lambda^2 + lambda + p.ec.a
     y_new = p.x^2 + lambda*x_new + x_new
+    return ECPointAffine(x_new, y_new, p.ec)
+end
+
+function double_threaded(p::ECPointAffine{D,R,T}) where {D,R,T}
+    if iszero(p) return p end
+    if p==-p return zero(ECPointAffine{D,R,T}, p.ec) end
+
+    lambda = p.x + (p.y / p.x)
+    x_new_task = Threads.@spawn $lambda^2 + $lambda + $(p.ec.a)
+    y_new = (p.x)^2
+    x_new::BFieldPoint{D,R,T} = fetch(x_new_task)
+    y_new += lambda*x_new + x_new
     return ECPointAffine(x_new, y_new, p.ec)
 end
 

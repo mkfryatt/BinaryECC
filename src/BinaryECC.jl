@@ -63,15 +63,15 @@ export
 
     #elliptic curve routines
     double,
+    double_threaded,
+    double_standard,
     mult_standard,
     mult_window,
     mult_threaded,
     mult_threaded_window,
-    mult_threaded_ownreduce,
     mult_bnaf,
-    mult_wnaf,
     mult_bnaf_window,
-    mult_bnaf_window_test,
+    mult_wnaf,
     mult_mont_general,
     mult_mont_affine,
     naf,

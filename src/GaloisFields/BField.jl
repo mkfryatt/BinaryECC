@@ -135,7 +135,22 @@ function mult_shiftandadd_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w
     #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
-    notprinted = true
+    for i in 0:window:D-1
+        u = getbits(a.value, i, window)
+        if u!=0 shiftedxor!(c, Bu[u], i) end
+    end
+
+    return reduce(BFieldPoint{D,R,T}(c))
+end
+
+function div_threaded(b::BFieldPoint{D,R,T}, a::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
+    a_inv_task = Threads.@spawn inv($a)
+    Bu::Array{StaticUInt{((D+8) ÷ bitsize(T)) +1,T},1} = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
+
+    #c needs to store a polynomial of degree 2D
+    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+    a = fetch(a_inv_task)
+
     for i in 0:window:D-1
         u = getbits(a.value, i, window)
         if u!=0 shiftedxor!(c, Bu[u], i) end

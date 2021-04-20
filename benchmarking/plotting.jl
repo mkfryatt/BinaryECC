@@ -198,3 +198,30 @@ function best_scalarmult()
     savefig("benchmarking/scalar_mult/scalar_mult.tex")
     savefig("benchmarking/scalar_mult/scalar_mult")
 end
+
+function double_threads()
+    threads_ci, standard_ci = [], []
+    x_coords = []
+    threads_coords, standard_coords = [], []
+
+    open("benchmarking/threads_double/threads_double.txt", "r") do io
+        x_coords = eval(Meta.parse(readline(io)))
+        standard_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        standard_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        threads_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        threads_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+    end
+
+    p = plot(x_coords, threads_coords, yerror=threads_ci,
+        size = (300,200),
+        label= "Multithreaded",
+        xlabel=L"\log_2 \textrm{group order}",
+        ylabel=L"\textrm{time} / \mu s")
+
+    plot!(p, x_coords, standard_coords, yerror=standard_ci,
+        legend= true,
+        label= "Single threaded")
+
+    savefig("benchmarking/threads_double/threads_double.tex")
+    savefig("benchmarking/threads_double/threads_double")
+end

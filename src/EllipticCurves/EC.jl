@@ -232,9 +232,8 @@ function mult_bnaf_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::Abst
 
     (adds, subs, l) = naf(k)
 
-    #make this size  more accurate
     n = (2^w - (-1)^w) ÷ 3
-    precomp = precompute(P, n, 2)# 1<<(w-1), 2)
+    precomp = precompute(P, n, 2)
 
     Q = zero(typeof(P), P.ec)
     i = l-1
@@ -258,35 +257,6 @@ function mult_bnaf_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::Abst
         end
 
         i -= t
-    end
-    return Q
-end
-
-function mult_bnaf_window_test(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractECPoint{D,R,T} where {D,R,T}
-    if w==1 return mult_bnaf(P, k) end
-    if k<0 return (-P)*(-k) end
-    if iszero(P) return P end
-    if k==0 return zero(typeof(P), P.ec) end
-    if k==1 return P end
-
-    (adds, subs, l) = naf(k)
-
-    #make this size  more accurate
-    n = 2*(2^w - (-1)^w) ÷ 3
-    precomp = precompute(P, n, 1)
-
-    Q = zero(typeof(P), P.ec)
-    for i in (l-(l%w)):-w:0
-        u = (adds>>i)&(1<<w -1)
-        u -= (subs>>i)&(1<<w -1)
-
-        for j in 1:w Q = double(Q) end
-
-        if u>0 Q += precomp[u]
-        elseif u<0 Q -= precomp[-u]
-        end
-
-        i -= w
     end
     return Q
 end
