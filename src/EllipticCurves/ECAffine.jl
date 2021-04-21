@@ -8,7 +8,7 @@ Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
 struct ECPointAffine{D,R,T} <: AbstractECPoint{D,R,T}
     x::BFieldPoint{D,R,T}
     y::BFieldPoint{D,R,T}
-    ec::EC{D,R,T}
+    ec::Ref{EC{D,R,T}}
 end
 
 """
@@ -16,7 +16,7 @@ end
 Convert a hex string to a point on the given elliptic curve
 using the procedure in SEC 2 (version 2), section 2.3.4.
 """
-function ECPointAffine(s::String, ec::EC{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
+function ECPointAffine(s::String, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} where {D,R,T}
     s = replace(s, " " => "")
 
     #point is id
@@ -72,7 +72,7 @@ function +(p1::ECPointAffine{D,R,T}, p2::ECPointAffine{D,R,T})::ECPointAffine{D,
     #Invs: 1
     x1x2 = p1.x + p2.x
     lambda = (p1.y+p2.y) / x1x2
-    x3 = lambda^2 + lambda + x1x2 + p1.ec.a
+    x3 = square(lambda) + lambda + x1x2 + p1.ec[].a
     y3 = lambda*(p1.x+x3) + x3 + p1.y
     return ECPointAffine(x3, y3, p1.ec)
 end
@@ -99,8 +99,8 @@ function double_standard(p::ECPointAffine{D,R,T}) where {D,R,T}
     #Sqrs: 2
     #Invs: 1
     lambda = p.x + (p.y / p.x)
-    x_new = lambda^2 + lambda + p.ec.a
-    y_new = p.x^2 + lambda*x_new + x_new
+    x_new = square(lambda) + lambda + p.ec[].a
+    y_new = square(p.x) + lambda*x_new + x_new
     return ECPointAffine(x_new, y_new, p.ec)
 end
 
@@ -109,8 +109,8 @@ function double_threaded(p::ECPointAffine{D,R,T}) where {D,R,T}
     if p==-p return zero(ECPointAffine{D,R,T}, p.ec) end
 
     lambda = p.x + (p.y / p.x)
-    x_new_task = Threads.@spawn $lambda^2 + $lambda + $(p.ec.a)
-    y_new = (p.x)^2
+    x_new_task = Threads.@spawn square($lambda) + $lambda + $(p.ec[].a)
+    y_new = square(p.x)
     x_new::BFieldPoint{D,R,T} = fetch(x_new_task)
     y_new += lambda*x_new + x_new
     return ECPointAffine(x_new, y_new, p.ec)
@@ -129,11 +129,11 @@ function mult_mont_affine(p::ECPointAffine{D,R,T}, n::I)::ECPointAffine{D,R,T} w
     if n==0 || iszero(p) return p end
     if n<0 return mont_pow_ladder(-p, -n) end
 
-    b = p.ec.b
+    b = p.ec[].b
     x = p.x
 
     x1 = x
-    x2 = x^2
+    x2 = square(x)
     x2 += b/x2
     v1, v2 = I(1), I(2)
     for i in (bits(n)-2):-1:0
@@ -149,15 +149,15 @@ function mult_mont_affine(p::ECPointAffine{D,R,T}, n::I)::ECPointAffine{D,R,T} w
         end
         t = x1 / (x1+x2)
         if (n>>>i)&1==1
-            x1 = x + t^2 + t
-            x2 = x2^2
+            x1 = x + square(t) + t
+            x2 = square(x2)
             x2 += b/x2
             v1, v2 = v1+v2, 2*v2
 
         else
-            x1 = x1^2
+            x1 = square(x1)
             x1 += b/x1
-            x2 = x + t^2 + t
+            x2 = x + square(t) + t
             v1, v2 = 2*v1, v1+v2
         end
     end
@@ -169,7 +169,7 @@ end
 function find_point(x1::BFieldPoint{D,R,T}, x2::BFieldPoint{D,R,T}, p::ECPointAffine{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
     r1 = x1+p.x
     r2 = x2+p.x
-    y1 = r1*r2 + p.x^2 + p.y
+    y1 = r1*r2 + square(p.x) + p.y
     y1 *= r1/p.x
     y1 += p.y
     return ECPointAffine{D,R,T}(x1, y1, p.ec)
@@ -180,7 +180,7 @@ end
 Returns true if ``p`` is a point on the elliptic curve that it is associated with.
 """
 function isvalid(p::ECPointAffine)::Bool
-    return iszero(p) || (p.y^2 + p.x*p.y == p.x^3 + p.ec.a*p.x^2 + p.ec.b)
+    return iszero(p) || (square(p.y) + p.x*p.y == p.x^3 + p.ec[].a*square(p.x) + p.ec[].b)
 end
 
 """
@@ -195,10 +195,10 @@ end
     zero(::Type{ECPointAffine, ec::EC{D,R,T}) where {D,R,T}
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointAffine}, ec::EC{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
+function zero(::Type{ECPointAffine}, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} where {D,R,T}
     return ECPointAffine{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
 end
 
-function zero(::Type{ECPointAffine{D,R,T}}, ec::EC{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
+function zero(::Type{ECPointAffine{D,R,T}}, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} where {D,R,T}
     return ECPointAffine{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
 end

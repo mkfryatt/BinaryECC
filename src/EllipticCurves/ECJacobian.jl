@@ -13,7 +13,7 @@ struct ECPointJacobian{D,R,T} <: AbstractECPoint{D,R,T}
     x::BFieldPoint{D,R,T}
     y::BFieldPoint{D,R,T}
     z::BFieldPoint{D,R,T}
-    ec::EC{D,R,T}
+    ec::Ref{EC{D,R,T}}
 end
 
 """
@@ -25,8 +25,8 @@ function repr(p::ECPointJacobian)::String
 end
 
 function ==(p1::ECPointJacobian{D,R,T}, p2::ECPointJacobian{D,R,T})::Bool where {D,R,T}
-    z1_2 = p1.z^2
-    z2_2 = p2.z^2
+    z1_2 = square(p1.z)
+    z2_2 = square(p2.z)
     return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*z2_2==p2.x*z1_2 && p1.y*p2.z*z2_2==p2.y*p1.z*z1_2
 end
 
@@ -42,18 +42,18 @@ function +(p1::ECPointJacobian{D,R,T}, p2::ECPointJacobian{D,R,T})::ECPointJacob
     #Sqrs: 6
     #Invs: 0
 
-    z1_2 = p1.z^2
-    z2_2 = p2.z^2
+    z1_2 = square(p1.z)
+    z2_2 = square(p2.z)
     A = p1.y*p2.z*z2_2 + p2.y*p1.z*z1_2
     C = p1.x*z2_2 + p2.x*z1_2
     B = p1.z * p2.z * C
 
     z3 = B * z1_2
 
-    x3 = A*(A+B) + C^3 + p1.ec.a*B^2
-    x3 *= z1_2^2
+    x3 = A*(A+B) + C^3 + p1.ec[].a*square(B)
+    x3 *= square(z1_2)
 
-    z3_2 = z3^2
+    z3_2 = square(z3)
     t = x3*z1_2
     y3 = A*(p1.x*z3_2 + t)
     y3 += C*p2.z*(t*p1.z + p1.y*z3_2)
@@ -75,19 +75,19 @@ function double(p::ECPointJacobian{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
     #Sqrs: 6
     #Invs: 0
 
-    z_2 = p.z^2
-    A = p.x^2 + p.y*p.z
+    z_2 = square(p.z)
+    A = square(p.x) + p.y*p.z
     B = p.x*z_2
 
-    z_4 = z_2^2
+    z_4 = square(z_2)
 
     z_new = B*z_4
 
     x_new = A*(A+B)
-    x_new += p.ec.a * B^2
-    x_new *= z_4^2
+    x_new += p.ec[].a * square(B)
+    x_new *= square(z_4)
 
-    y_new = B * (p.x*z_new)^2
+    y_new = B * square(p.x*z_new)
     y_new += (A+B)*x_new*z_4
 
     return ECPointJacobian{D,R,T}(x_new, y_new, z_new, p.ec)
@@ -111,7 +111,7 @@ function *(p::ECPointJacobian{D,R,T}, n::Integer)::ECPointJacobian{D,R,T} where 
 end
 
 function isvalid(p::ECPointJacobian)::Bool
-    return iszero(p) || (p.y^2 + p.x*p.y*p.z == p.x^3 + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^6)
+    return iszero(p) || (square(p.y) + p.x*p.y*p.z == p.x^3 + p.ec[].a*square(p.x*p.z) + p.ec[].b*p.z^6)
 end
 
 """
@@ -126,9 +126,9 @@ end
     zero(::Type{ECPointJacobian}, ec::EC{D,R,T}) where {D,R,T}
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointJacobian}, ec::EC{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
+function zero(::Type{ECPointJacobian}, ec::Ref{EC{D,R,T}})::ECPointJacobian{D,R,T} where {D,R,T}
     return ECPointJacobian{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
 end
-function zero(::Type{ECPointJacobian{D,R,T}}, ec::EC{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
+function zero(::Type{ECPointJacobian{D,R,T}}, ec::Ref{EC{D,R,T}})::ECPointJacobian{D,R,T} where {D,R,T}
     return ECPointJacobian{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
 end

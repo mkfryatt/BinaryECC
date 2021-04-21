@@ -5,7 +5,8 @@ Converts a point from Jacobian coordinates to affine coordinates.
 function convert(::Type{ECPointAffine}, p::ECPointJacobian{D,R,T}) where {D,R,T}
     if iszero(p) return ECPointAffine{D,R,T}(ec) end
     z_inv = inv(p.z)
-    return ECPointAffine{D,R,T}(p.x*z_inv^2, p.y*z_inv^3, p.ec)
+    z_inv2 = square(z_inv)
+    return ECPointAffine{D,R,T}(p.x*z_inv2, p.y*z_inv2*z_inv, p.ec)
 end
 
 """
@@ -15,7 +16,7 @@ Converts a point from Lopez-Dahab coordinates to affine coordinates.
 function convert(::Type{ECPointAffine}, p::ECPointLD{D,R,T}) where {D,R,T}
     if iszero(p) return ECPointAffine{D,R,T}(ec) end
     z_inv = inv(p.z)
-    return ECPointAffine{D,R,T}(p.x*z_inv, p.y*z_inv^2, p.ec)
+    return ECPointAffine{D,R,T}(p.x*z_inv, p.y*square(z_inv), p.ec)
 end
 
 """
@@ -56,7 +57,7 @@ function convert(::Type{ECPointLD}, p::ECPointJacobian{D,R,T}) where {D,R,T}
 end
 
 function ==(p1::ECPointAffine{D,R,T}, p2::ECPointLD{D,R,T}) where {D,R,T}
-    return (iszero(p1) && iszero(p2)) || (p1.x*p2.z == p2.x && p1.y*p2.z^2 == p2.y)
+    return (iszero(p1) && iszero(p2)) || (p1.x*p2.z == p2.x && p1.y*square(p2.z) == p2.y)
 end
 
 function ==(p1::ECPointLD{D,R,T}, p2::ECPointAffine{D,R,T}) where {D,R,T}
@@ -64,7 +65,7 @@ function ==(p1::ECPointLD{D,R,T}, p2::ECPointAffine{D,R,T}) where {D,R,T}
 end
 
 function ==(p1::ECPointAffine{D,R,T}, p2::ECPointJacobian{D,R,T}) where {D,R,T}
-    z2_2 = p2.z^2
+    z2_2 = square(p2.z)
     return (iszero(p1) && iszero(p2)) || (p1.x*z2_2 == p2.x && p1.y*p2.z*z2_2 == p2.y)
 end
 
@@ -73,8 +74,8 @@ function ==(p1::ECPointJacobian{D,R,T}, p2::ECPointAffine{D,R,T}) where {D,R,T}
 end
 
 function ==(p1::ECPointLD{D,R,T}, p2::ECPointJacobian{D,R,T}) where {D,R,T}
-    z2_2 = p2.z^2
-    return (iszero(p1) && iszero(p2)) || (p1.x*z2_2 == p2.x*p1.z && p1.y*p2.z*z2_2 == p2.y*p1.z^2)
+    z2_2 = square(p2.z)
+    return (iszero(p1) && iszero(p2)) || (p1.x*z2_2 == p2.x*p1.z && p1.y*p2.z*z2_2 == p2.y*square(p1.z))
 end
 
 function ==(p1::ECPointJacobian{D,R,T}, p2::ECPointLD{D,R,T}) where {D,R,T}
@@ -97,8 +98,8 @@ function +(::Type{ECPointJacobian{D,R,T}}, p1::ECPointLD{D,R,T}, p2::ECPointJaco
     #Sqrs: 5
     #Invs: 0
 
-    z2_2 = p2.z^2
-    z1_2 = p1.z^2
+    z2_2 = square(p2.z)
+    z1_2 = square(p1.z)
     A = p1.y*z2_2*p2.z + p2.y*z1_2
     C = p1.x*z2_2 + p2.x*p1.z
     B = p1.z*p2.z*C
@@ -107,11 +108,11 @@ function +(::Type{ECPointJacobian{D,R,T}}, p1::ECPointLD{D,R,T}, p2::ECPointJaco
 
     AB = A+B
 
-    x_new = A*AB + p1.ec.a*B^2 + C^3*p1.z
+    x_new = A*AB + p1.ec[].a*square(B) + C^3*p1.z
     x_new *= z1_2
 
     y_new = A*p1.x + C*p1.y*p2.z
-    y_new *= z_new^2
+    y_new *= square(z_new)
     y_new += x_new*p1.z*AB
 
     return ECPointJacobian{D,R,T}(x_new, y_new, z_new, p2.ec)
@@ -141,18 +142,18 @@ function +(::Type{ECPointLD{D,R,T}}, p1::ECPointLD{D,R,T}, p2::ECPointJacobian{D
     #Sqrs: 4
     #Invs: 0
 
-    z2_2 = p2.z^2
-    A = p1.y*z2_2*p2.z + p2.y*p1.z^2
+    z2_2 = square(p2.z)
+    A = p1.y*z2_2*p2.z + p2.y*square(p1.z)
     C = p1.x*z2_2 + p2.x*p1.z
     B = p1.z*p2.z*C
 
-    B2 = B^2
+    B2 = square(B)
 
     z_new = B2*p1.z
 
     AB = A+B
 
-    x_new = A*AB + p1.ec.a*B2 + C^3*p1.z
+    x_new = A*AB + p1.ec[].a*B2 + C^3*p1.z
     x_new *= p1.z
 
     y_new = A*p1.x + C*p1.y*p2.z

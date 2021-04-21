@@ -13,7 +13,7 @@ struct ECPointLD{D,R,T} <: AbstractECPoint{D,R,T}
     x::BFieldPoint{D,R,T}
     y::BFieldPoint{D,R,T}
     z::BFieldPoint{D,R,T}
-    ec::EC{D,R,T}
+    ec::Ref{EC{D,R,T}}
 end
 
 """
@@ -25,7 +25,7 @@ function repr(p::ECPointLD)::String
 end
 
 function ==(p1::ECPointLD{D,R,T}, p2::ECPointLD{D,R,T})::Bool where {D,R,T}
-    return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*p2.z==p2.x*p1.z && p1.y*p2.z^2==p2.y*p1.z^2
+    return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*p2.z==p2.x*p1.z && p1.y*square(p2.z)==p2.y*square(p1.z)
 end
 
 function +(p1::ECPointLD{D,R,T}, p2::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
@@ -40,14 +40,14 @@ function +(p1::ECPointLD{D,R,T}, p2::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {
     #Sqrs: 4
     #Invs: 0
 
-    A = p1.y*p2.z^2 + p2.y*p1.z^2
+    A = p1.y*square(p2.z) + p2.y*square(p1.z)
     C = p1.x*p2.z + p2.x*p1.z
     E = p2.z*C
     B = p1.z*E
 
-    z3 = B^2
+    z3 = square(B)
 
-    x3 = A*(A+B) + B*(C^2 + p1.ec.a*B)
+    x3 = A*(A+B) + B*(square(C) + p1.ec[].a*B)
 
     t = x3*p1.z
 
@@ -71,17 +71,17 @@ function double(p::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
     #Sqrs: 3
     #Invs: 0
 
-    x_2 = p.x^2
+    x_2 = square(p.x)
     A = x_2 + p.y
     B = p.x*p.z
 
-    z_new = B^2
+    z_new = square(B)
 
     AB = A+B
 
-    x_new = A*AB + p.ec.a*z_new
+    x_new = A*AB + p.ec[].a*z_new
 
-    y_new = x_2^2 * z_new + x_new*B*AB
+    y_new = square(x_2) * z_new + x_new*B*AB
 
     return ECPointLD{D,R,T}(x_new, y_new, z_new, p.ec)
 end
@@ -104,7 +104,7 @@ function *(p::ECPointLD{D,R,T}, n::Integer)::ECPointLD{D,R,T} where {D,R,T}
 end
 
 function isvalid(p::ECPointLD)::Bool
-    return iszero(p) || (p.y^2 + p.x*p.y*p.z == p.x^3*p.z + p.ec.a*p.x^2*p.z^2 + p.ec.b*p.z^4)
+    return iszero(p) || (square(p.y) + p.x*p.y*p.z == p.x^3*p.z + p.ec[].a*square(p.x*p.z) + p.ec[].b*p.z^4)
 end
 
 """
@@ -119,9 +119,9 @@ end
     zero(::Type{ECPointLD}, ec::EC{D,R,T}) where {D,R,T}
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointLD}, ec::EC{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
+function zero(::Type{ECPointLD}, ec::Ref{EC{D,R,T}})::ECPointLD{D,R,T} where {D,R,T}
     return ECPointLD{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
 end
-function zero(::Type{ECPointLD{D,R,T}}, ec::EC{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
+function zero(::Type{ECPointLD{D,R,T}}, ec::Ref{EC{D,R,T}})::ECPointLD{D,R,T} where {D,R,T}
     return ECPointLD{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
 end

@@ -43,6 +43,9 @@ same ``a`` and ``b`` values, and defined over the same field.
 function ==(ec1::EC{D,R,T}, ec2::EC{D,R,T}) where {D,R,T}
     return ec1.a==ec2.a && ec1.b==ec2.b
 end
+function ==(ec1::Ref{EC{D,R,T}}, ec2::Ref{EC{D,R,T}}) where {D,R,T}
+    return ec1[] === ec2[]
+end
 
 """
     -(p1::AbstractECPoint, p2::AbstractECPoint)

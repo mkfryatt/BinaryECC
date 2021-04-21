@@ -112,9 +112,6 @@ end
 Returns ``a \\cdot b`` using the right to left shift and add method.
 """
 function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
-    #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
     for i in 0:(D-1)
@@ -127,29 +124,8 @@ function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldP
 end
 
 function mult_shiftandadd_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
-    if window==1 return mult_shiftandadd(a, b) end
-    if a.value==b.value return square(a) end
-
     Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
-
-    #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
-
-    for i in 0:window:D-1
-        u = getbits(a.value, i, window)
-        if u!=0 shiftedxor!(c, Bu[u], i) end
-    end
-
-    return reduce(BFieldPoint{D,R,T}(c))
-end
-
-function div_threaded(b::BFieldPoint{D,R,T}, a::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
-    a_inv_task = Threads.@spawn inv($a)
-    Bu::Array{StaticUInt{((D+8) ÷ bitsize(T)) +1,T},1} = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
-
-    #c needs to store a polynomial of degree 2D
-    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
-    a = fetch(a_inv_task)
 
     for i in 0:window:D-1
         u = getbits(a.value, i, window)
@@ -164,19 +140,13 @@ end
 Returns ``a \\cdot b`` using the right to left shift and add method with multithreading.
 """
 function mult_threaded(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
     mid = (length(a.value) ÷ 2)*64 -1
-
     c1 = Threads.@spawn mult_threaded_helper($a, $b, 0, $mid)
     c2 = Threads.@spawn mult_threaded_helper($a, $b, $mid+1, $D-1)
-
     return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
 end
-function mult_threaded_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
-    #c needs to store a polynomial of degree 2D
+function mult_threaded_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T},
+    start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
     for i in start:stop
@@ -189,22 +159,14 @@ function mult_threaded_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, star
 end
 
 function mult_threaded_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int)::BFieldPoint{D,R,T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
     mid = (length(a.value) ÷ 2)*64 -1
-
     c1 = Threads.@spawn mult_window_helper($a, $b, $w, 0, $mid)
     c2 = Threads.@spawn mult_window_helper($a, $b, $w, $mid+1, $D-1)
-
     return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
 end
 function mult_window_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int,
      start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
     Bu::Array{StaticUInt{L,T},1} where L = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<w -UInt8(1))]
-
-    #c needs to store a polynomial of degree 2D
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
     extra = (stop+1-start) % w
@@ -226,8 +188,6 @@ Returns ``a \\cdot b`` using the right to left shift and add method,
 without needing to call a reduction function.
 """
 function mult_ownreduce(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
     L = ceil(Int,D/bitsize(T))
     shiftedb::StaticUInt{L,T} = copy(b.value)
     c = zero(StaticUInt{L,T})
@@ -253,14 +213,8 @@ Returns ``a \\cdot b`` using a right to left comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.34).
 """
 function mult_comb_rtl(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    if a.value==b.value return square(a) end
-
     L = ceil(Int,D/bitsize(T))
-
-    #c needs to store polynomials of degree 2D
     c = zero(StaticUInt{2*L,T})
-
-    #b needs to store polynomials of degree D+wordsize
     bvalue = changelength(b.value, L+1)
 
     for k in 0:(bitsize(T)-1)
@@ -281,9 +235,6 @@ Returns ``a \\cdot b`` using a left to right comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
 """
 function mult_comb_ltr(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BFieldPoint{D,R,T} where {D,R,T}
-    if w>1 return mult_comb_window(a, b, w) end
-    if a.value==b.value return square(a) end
-
     L = ceil(Int,D/bitsize(T))
     c = zero(StaticUInt{2*L,T})
 
@@ -436,6 +387,22 @@ function /(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} whe
     return a * inv(b)
 end
 
+function div_threaded(b::BFieldPoint{D,R,T}, a::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
+    a_inv_task = Threads.@spawn inv($a)
+    Bu::Array{StaticUInt{((D+8) ÷ bitsize(T)) +1,T},1} = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
+
+    #c needs to store a polynomial of degree 2D
+    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+    a = fetch(a_inv_task)
+
+    for i in 0:window:D-1
+        u = getbits(a.value, i, window)
+        if u!=0 shiftedxor!(c, Bu[u], i) end
+    end
+
+    return reduce(BFieldPoint{D,R,T}(c))
+end
+
 #right to left, square and multiply method
 """
     ^(a::BFieldPoint{D,R,T}, b::Integer) where {D,R,T}
@@ -450,7 +417,7 @@ function ^(a::BFieldPoint{D,R,T}, b::Integer)::BFieldPoint{D,R,T} where {D,R,T}
         if b & 1 == 1
             c *= squaring
         end
-        squaring *= squaring
+        squaring = square(squaring)
         b >>>= 1
     end
 
