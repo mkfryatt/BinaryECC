@@ -2,7 +2,7 @@ using Test
 
 function testcurve(curve, verbose=true)
     if verbose println("Testing $curve:") end
-    tests = readlines("./testvectors/$curve.txt")
+    tests = readlines("./test/$curve.txt")
     G = curve(UInt).G
 
     for i in 1:4:length(tests)
