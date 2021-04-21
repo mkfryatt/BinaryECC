@@ -330,3 +330,147 @@ function collect_montmult()
         write(io, "$threaded_ci\n")
     end
 end
+
+function collect_becc()
+    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
+    fields = [BFieldPoint113, BFieldPoint131, BFieldPoint163, BFieldPoint193,
+        BFieldPoint233, BFieldPoint239, BFieldPoint283, BFieldPoint409, BFieldPoint571]
+    fields = [f{UInt64} for f in fields]
+
+    y_coords = Dict("mult"=>[], "sq"=>[], "inv"=>[])
+    ci = Dict("mult"=>[], "sq"=>[], "inv"=>[])
+    for field in fields
+        println("field: $field\n")
+
+        x = "@benchmark \$(random($field)) * \$(random($field))"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["mult"], [mean(b.times)])
+        append!(ci["mult"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "@benchmark (\$(random($field)))^2"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["sq"], [mean(b.times)])
+        append!(ci["sq"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "@benchmark inv(\$(random($field)))"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["inv"], [mean(b.times)])
+        append!(ci["inv"], [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    for op in ["mult", "sq", "inv"]
+        open("benchmarking/becc/becc-$op.txt", "w") do io
+            write(io, "$x_coords\n")
+            write(io, "$(y_coords[op])\n")
+            write(io, "$(ci[op])\n")
+        end
+    end
+end
+
+function collect_nemo()
+    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
+
+    y_coords = Dict("mult"=>[], "sq"=>[], "inv"=>[])
+    ci = Dict("mult"=>[], "sq"=>[], "inv"=>[])
+    for m in x_coords
+        println("field: $m\n")
+
+        x = "(S, x) = FlintFiniteField(2, $m, \"a\"); x = x^$m; @benchmark \$(x^rand(Int)^11) * \$(x^rand(Int)^11)"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["mult"], [mean(b.times)])
+        append!(ci["mult"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "(S, x) = FlintFiniteField(2, $m, \"a\"); x = x^$m; @benchmark (\$(x^rand(Int)^11))^2"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["sq"], [mean(b.times)])
+        append!(ci["sq"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "(S, x) = FlintFiniteField(2, $m, \"a\"); x = x^$m; @benchmark inv(\$(x^rand(Int)))"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["inv"], [mean(b.times)])
+        append!(ci["inv"], [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    for op in ["mult", "sq", "inv"]
+        open("benchmarking/nemo/nemo-$op.txt", "w") do io
+            write(io, "$x_coords\n")
+            write(io, "$(y_coords[op])\n")
+            write(io, "$(ci[op])\n")
+        end
+    end
+end
+
+function collect_gf()
+    x_coords = [113, 131, 163, 193, 233, 239, 283, 409]
+
+    y_coords = Dict("mult"=>[], "sq"=>[], "inv"=>[])
+    ci = Dict("mult"=>[], "sq"=>[], "inv"=>[])
+    for m in x_coords
+        println("field: $m\n")
+
+        x = "F, x = GaloisField(BigInt(2)^$m, :x); x = x^-1; @benchmark \$(x^rand(Int)^11) * \$(x^rand(Int)^11)"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["mult"], [mean(b.times)])
+        append!(ci["mult"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "F, x = GaloisField(BigInt(2)^$m, :x); x = x^-1; @benchmark inv(\$(x^rand(Int)^11))"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["sq"], [mean(b.times)])
+        append!(ci["sq"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "F, x = GaloisField(BigInt(2)^$m, :x); x = x^-1; @benchmark inv(\$(x^rand(Int)^11))"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["inv"], [mean(b.times)])
+        append!(ci["inv"], [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    for op in ["mult", "sq", "inv"]
+        open("benchmarking/gf/gf-$op.txt", "w") do io
+            write(io, "$x_coords\n")
+            write(io, "$(y_coords[op])\n")
+            write(io, "$(ci[op])\n")
+        end
+    end
+end
+
+function collect_openssl()
+    groups = [SECT163K1, SECT233K1, SECT283K1, SECT409K1, SECT571K1]
+    groups = [group(UInt64) for group in groups]
+    x_coords = [log(2, group.n) for group in groups]
+    orders = [163, 233, 283, 409, 571]
+
+    y_coords =[Dict("becc"=>[], "openssl"=>[])
+    ci = [Dict("becc"=>[], "openssl"=>[])
+    for i in 1:length(x_coords)
+        m = orders[i]
+        group = groups[i]
+        println("group: sect$m k1\n")
+
+        x = "@benchmark run(`openssl ecparam -name sect"*repr(m)*"k1 -genkey -noout -text`)"
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["openssl"], [mean(b.times)])
+        append!(ci["openssl"], [gaussian_ci(std(b.times), length(b.times))])
+
+        x = "@benchmark "
+        x = Meta.parse(x)
+        b = eval(x)
+        append!(y_coords["becc"], [mean(b.times)])
+        append!(ci["becc"], [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    open("benchmarking/openssl/openssl.txt", "w") do io
+        write(io, "$x_coords\n")
+        write(io, "$y_coords\n")
+        write(io, "$ci\n")
+    end
+end

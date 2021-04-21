@@ -257,3 +257,37 @@ function mult_mont()
     savefig("benchmarking/mult_mont/mult_mont.tex")
     savefig("benchmarking/mult_mont/mult_mont")
 end
+
+function plot_package(package="gf", label="GaloisFields")
+
+    for op in ["mult", "sq", "inv"]
+        becc_ci, other_ci = [], []
+        x_coords = []
+        becc_coords, other_coords = [], []
+
+        open("benchmarking/becc/becc-$op.txt", "r") do io
+            x_coords = eval(Meta.parse(readline(io)))
+            becc_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            becc_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        end
+        open("benchmarking/$package/$package-$op.txt", "r") do io
+            x_coords = eval(Meta.parse(readline(io)))
+            other_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            other_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        end
+
+        r = 1:length(x_coords)
+        p = plot(x_coords, becc_coords[r], yerror=becc_ci[r],
+            size = (300,200),
+            label= "BinaryECC",
+            xlabel=L"\log_2 \textrm{field size}",
+            ylabel=L"\textrm{time} / \mu s")
+
+        plot!(p, x_coords, other_coords, yerror=other_ci,
+            legend= true,
+            label= label)
+
+        savefig("benchmarking/$package/$package-$op.tex")
+        savefig("benchmarking/$package/$package-$op")
+    end
+end
