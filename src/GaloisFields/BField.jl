@@ -1,7 +1,7 @@
 #D is the degree of the reduction polynomial
 #R is the reduction polynomial without the x^D term
 """
-    BFieldPoint{D,R,T}
+    BFieldPoint{D,R,T,L}
 Represents a point in the binary field which has order ``2^D`` and reduction polynomial
 
 ``x^D + x^{r_n} + \\cdots + x^{r_0}``
@@ -21,65 +21,66 @@ Types for points in the standard fields (taken from SEC 2, table 3)
 - BFieldPoint409
 - BFieldPoint571
 """
-struct BFieldPoint{D,R,T}
-    value::StaticUInt{L,T} where L
-    BFieldPoint{D,R,T}(value::Integer) where {D,R,T} =
-        new(StaticUInt{ceil(Int,D/bitsize(T)),T}(value))
-    BFieldPoint{D,R,T}(value::StaticUInt{L,T}) where {D,R,T,L} = new(value)
+struct BFieldPoint{D,R,T,L}
+    value::StaticUInt{L,T}
+    BFieldPoint{D,R,T,L}(value::Integer) where {D,R,T,L} =
+        new(StaticUInt{L,T}(value))
+    BFieldPoint{D,R,T,L}(value::StaticUInt{L,T}) where {D,R,T,L} = new(value)
 end
 
+#ceil(Int,D/bitsize(T))
 """
-    BFieldPoint{D,R,T}(s::String) where {D,R,T}
+    BFieldPoint{D,R,T,L}(s::String) where {D,R,T,L}
 Using the procedure set out in SEC 1 (version 2) 2.3.6,
 this converts a hex string to a field element.
 """
-function BFieldPoint{D,R,T}(s::String) where {D,R,T}
+function BFieldPoint{D,R,T,L}(s::String) where {D,R,T,L}
     s = replace(s, " " => "")
     if length(s)!=ceil(D / 8)*2 throw(ArgumentError("Octet string is of the incorrect length for this field.")) end
     value = StaticUInt{ceil(Int,D/bitsize(T)),T}(s)
-    return BFieldPoint{D,R,T}(value)
+    return BFieldPoint{D,R,T,L}(value)
 end
 
-function copy(x::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    return BFieldPoint{D,R,T}(copy(x.value))
+function copy(x::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    return BFieldPoint{D,R,T,L}(copy(x.value))
 end
 
 """
-    ==(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    ==(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns true if the points ``a`` and ``b`` from the same field are equal,
  and false otherwise.
 """
-function ==(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::Bool where {D,R,T}
+function ==(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::Bool where {D,R,T,L}
     return a.value==b.value
 end
 
 """
-    +(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    +(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns a new element (of the binary field represented by {D,R}) which is the result of ``a+b``.
 """
-function +(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    return BFieldPoint{D,R,T}(a.value ⊻ b.value)
+function +(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    return BFieldPoint{D,R,T,L}(a.value ⊻ b.value)
 end
 
 """
-    -(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    -(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns a new element (of the binary field represented by {D,R}) which is the result of ``a-b``.
 """
-function -(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function -(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     return a+b
 end
 
-function -(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function -(a::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     return copy(a)
 end
 
 #note: this is the standard algorithm, but faster specialised versions of it are
 #available for each of the standard fields (in Field_fastreduce.jl)
 """
-    reduce(a::BFieldPoint{D,R,T}) where {D,R,T}
+    reduce(a::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns the least element ``b``, such that ``a \\equiv b \\pmod{R}``.
 """
-function reduce(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function reduce(a::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,ceil(Int,D/bitsize(T))} where {D,R,T,L}
     #b will should always be such that a ≡ b (mod R)
     #the loop will modify it until it reaches the smallest value that makes that true
     b = copy(a.value)
@@ -95,23 +96,23 @@ function reduce(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
 
     #remove excess blocks from b
     b = changelength(b, ceil(Int,D/bitsize(T)))
-    return BFieldPoint{D,R,T}(b)
+    return BFieldPoint{D,R,T,ceil(Int,D/bitsize(T))}(b)
 end
 
 """
-    *(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    *(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns a new element (of the binary field represented by {D,R}) which is the
  result of ``a \\cdot b``.
 """
-function *(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function *(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     return mult_shiftandadd_window(a, b, 4)
 end
 
 """
-    mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    mult_shiftandadd(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns ``a \\cdot b`` using the right to left shift and add method.
 """
-function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function mult_shiftandadd(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
 
     for i in 0:(D-1)
@@ -120,34 +121,37 @@ function mult_shiftandadd(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldP
         end
     end
 
-    return reduce(BFieldPoint{D,R,T}(c))
+    return reduce(BFieldPoint{D,R,T,L}(c))
 end
 
-function mult_shiftandadd_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
+function mult_shiftandadd_window(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, window::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}
     Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
-    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+    longL = ceil(Int,2*D/bitsize(T))
+    c = zero(StaticUInt{longL,T})
 
     for i in 0:window:D-1
         u = getbits(a.value, i, window)
         if u!=0 shiftedxor!(c, Bu[u], i) end
     end
 
-    return reduce(BFieldPoint{D,R,T}(c))
+    return reduce(BFieldPoint{D,R,T,longL}(c))
 end
 
 """
-    mult_threaded(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    mult_threaded(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns ``a \\cdot b`` using the right to left shift and add method with multithreading.
 """
-function mult_threaded(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function mult_threaded(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     mid = (length(a.value) ÷ 2)*64 -1
     c1 = Threads.@spawn mult_threaded_helper($a, $b, 0, $mid)
     c2 = Threads.@spawn mult_threaded_helper($a, $b, $mid+1, $D-1)
-    return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
+    longL = ceil(Int,2*D/bitsize(T))
+    return reduce(BFieldPoint{D,R,T,longL}(fetch(c1) ⊻ fetch(c2)))
 end
-function mult_threaded_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T},
-    start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
-    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+function mult_threaded_helper(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L},
+    start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T,L}
+    longL = ceil(Int,2*D/bitsize(T))
+    c = zero(StaticUInt{longL,T})
 
     for i in start:stop
         if getbit(a.value,i)==1
@@ -158,16 +162,18 @@ function mult_threaded_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T},
     return c
 end
 
-function mult_threaded_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int)::BFieldPoint{D,R,T} where {D,R,T}
+function mult_threaded_window(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, w::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}
     mid = (length(a.value) ÷ 2)*64 -1
     c1 = Threads.@spawn mult_window_helper($a, $b, $w, 0, $mid)
     c2 = Threads.@spawn mult_window_helper($a, $b, $w, $mid+1, $D-1)
-    return reduce(BFieldPoint{D,R,T}(fetch(c1) ⊻ fetch(c2)))
+    longL = ceil(Int,2*D/bitsize(T))
+    return reduce(BFieldPoint{D,R,T,longL}(fetch(c1) ⊻ fetch(c2)))
 end
-function mult_window_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int,
-     start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T}
-    Bu::Array{StaticUInt{L,T},1} where L = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<w -UInt8(1))]
-    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+function mult_window_helper(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, w::Int,
+     start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T,L}
+    Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<w -UInt8(1))]
+    longL = ceil(Int,2*D/bitsize(T))
+    c = zero(StaticUInt{longL,T})
 
     extra = (stop+1-start) % w
     for i in start:w:(stop-extra)
@@ -183,12 +189,11 @@ function mult_window_helper(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w::Int
 end
 
 """
-    mult_ownreduce(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    mult_ownreduce(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns ``a \\cdot b`` using the right to left shift and add method,
 without needing to call a reduction function.
 """
-function mult_ownreduce(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    L = ceil(Int,D/bitsize(T))
+function mult_ownreduce(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     shiftedb::StaticUInt{L,T} = copy(b.value)
     c = zero(StaticUInt{L,T})
     r = StaticUInt{128÷bitsize(T),T}(R)
@@ -204,16 +209,15 @@ function mult_ownreduce(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoi
         end
     end
 
-    return BFieldPoint{D,R,T}(c)
+    return BFieldPoint{D,R,T,L}(c)
 end
 
 """
-    mult_comb_rtl(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    mult_comb_rtl(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns ``a \\cdot b`` using a right to left comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.34).
 """
-function mult_comb_rtl(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    L = ceil(Int,D/bitsize(T))
+function mult_comb_rtl(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     c = zero(StaticUInt{2*L,T})
     bvalue = changelength(b.value, L+1)
 
@@ -226,16 +230,15 @@ function mult_comb_rtl(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoin
         if k!=(bitsize(T)-1) leftshift!(bvalue,1) end
     end
 
-    return reduce(BFieldPoint{D,R,T}(c))
+    return reduce(BFieldPoint{D,R,T,2*L}(c))
 end
 
 """
-    mult_comb_ltr(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    mult_comb_ltr(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns ``a \\cdot b`` using a left to right comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
 """
-function mult_comb_ltr(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BFieldPoint{D,R,T} where {D,R,T}
-    L = ceil(Int,D/bitsize(T))
+function mult_comb_ltr(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, w=1)::BFieldPoint{D,R,T,L} where {D,R,T,L}
     c = zero(StaticUInt{2*L,T})
 
     for k in (bitsize(T)-1):-1:0
@@ -247,18 +250,17 @@ function mult_comb_ltr(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, w=1)::BFiel
         if k!=0 leftshift!(c,1) end
     end
 
-    return reduce(BFieldPoint{D,R,T}(c))
+    return reduce(BFieldPoint{D,R,T,2*L}(c))
 end
 
 """
-    mult_comb_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int) where {D,R,T}
+    mult_comb_window(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, window::Int) where {D,R,T,L}
 Returns ``a \\cdot b`` using a left to right comb method windowing
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.36).
 
 Performs best with a window size of 4.
 """
-function mult_comb_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
-    L = ceil(Int,D/bitsize(T))
+function mult_comb_window(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, window::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}
     Bu = [small_mult(b, u) for u=0:(1<<window -1)]
     c = zero(StaticUInt{2*L,T})
 
@@ -272,10 +274,10 @@ function mult_comb_window(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}, window::
         end
     end
 
-    return reduce(BFieldPoint{D,R,T}(c))
+    return reduce(BFieldPoint{D,R,T,2*L}(c))
 end
 
-function small_mult(a::BFieldPoint{D,R,T}, b::UInt8)::StaticUInt{((D+8) ÷ bitsize(T)) +1,T} where {D,R,T}
+function small_mult(a::BFieldPoint{D,R,T,L}, b::UInt8)::StaticUInt{((D+8) ÷ bitsize(T)) +1,T} where {D,R,T,L}
     blen = 8
     newL = ((D+blen) ÷ bitsize(T)) +1
     c = zero(StaticUInt{newL,T})
@@ -300,33 +302,35 @@ function small_mult(a::StaticUInt{L,T}, b::UInt8)::StaticUInt{L+1,T} where {L,T}
 end
 
 """
-    square(a::BFieldPoint{D,R,T}) where {D,R,T}
+    square(a::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns a new element (of the binary field represented by {D,R}) which is the
 result of ``a^2``.
 """
-function square(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function square(a::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     return square_window(a, 4)
 end
 
 #adds a zero between every digit of the original
-function square_standard(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
-    b = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+function square_standard(a::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    longL = ceil(Int,2*D/bitsize(T))
+    b = zero(StaticUInt{longL,T})
     for i in 0:(D-1)
         if getbit(a.value,i)==1
             flipbit!(b, i*2)
         end
     end
 
-    return reduce(BFieldPoint{D,R,T}(b))
+    return reduce(BFieldPoint{D,R,T,longL}(b))
 end
 
 """
-    square_window(a::BFieldPoint{D,R,T}, window::Int) where {D,R,T}
+    square_window(a::BFieldPoint{D,R,T,L}, window::Int) where {D,R,T,L}
 Returns ``a^2`` by inserting a zero between every bit in the original, using
 the specified window size.
 """
-function square_window(a::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
-    b = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+function square_window(a::BFieldPoint{D,R,T,L}, window::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    longL = ceil(Int,2*D/bitsize(T))
+    b = zero(StaticUInt{longL,T})
     spread = [StaticUInt{1,T}(spread_bits(i)) for i=0:(1<<window -1)]
 
     for i in 0:window:D-1
@@ -334,7 +338,7 @@ function square_window(a::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} w
         shiftedxor!(b, spread[u+1], i*2)
     end
 
-    return reduce(BFieldPoint{D,R,T}(b))
+    return reduce(BFieldPoint{D,R,T,longL}(b))
 end
 
 #needed for window_square
@@ -351,16 +355,15 @@ end
 #uses a version of egcd to invert a
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography
 """
-    inv(a::BFieldPoint{D,R,T}) where {D,R,T}
+    inv(a::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns a new element ``b`` such that ``a b ≡ 1 \\pmod{f_R(x)}``
  (where ``f_R(x)`` is the reduction polynomial for the field).
 """
-function inv(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function inv(a::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     if iszero(a.value) throw(DivideError()) end
 
-    L = ceil(Int,D/bitsize(T))
-    u::StaticUInt{L,T} = copy(a.value)
-    v::StaticUInt{L,T} = StaticUInt{L,T}(R)
+    u = copy(a.value)
+    v = StaticUInt{L,T}(R)
     flipbit!(v, D)
     g1 = one(StaticUInt{L,T})
     g2 = zero(StaticUInt{L,T})
@@ -375,24 +378,25 @@ function inv(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
         shiftedxor!(u, v, j)
         shiftedxor!(g1, g2, j)
     end
-    return BFieldPoint{D,R,T}(g1)
+    return BFieldPoint{D,R,T,L}(g1)
 end
 
 """
-    /(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T}) where {D,R,T}
+    /(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns a new element (of the binary field represented by {D,R}) which is the
 result of ``\\frac{a}{b}``.
 """
-function /(a::BFieldPoint{D,R,T}, b::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function /(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     return a * inv(b)
 end
 
-function div_threaded(b::BFieldPoint{D,R,T}, a::BFieldPoint{D,R,T}, window::Int)::BFieldPoint{D,R,T} where {D,R,T}
+function div_threaded(b::BFieldPoint{D,R,T,L}, a::BFieldPoint{D,R,T,L}, window::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}
     a_inv_task = Threads.@spawn inv($a)
-    Bu::Array{StaticUInt{((D+8) ÷ bitsize(T)) +1,T},1} = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
+    Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
 
     #c needs to store a polynomial of degree 2D
-    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+    longL = ceil(Int,2*D/bitsize(T))
+    c = zero(StaticUInt{longL,T})
     a = fetch(a_inv_task)
 
     for i in 0:window:D-1
@@ -400,17 +404,17 @@ function div_threaded(b::BFieldPoint{D,R,T}, a::BFieldPoint{D,R,T}, window::Int)
         if u!=0 shiftedxor!(c, Bu[u], i) end
     end
 
-    return reduce(BFieldPoint{D,R,T}(c))
+    return reduce(BFieldPoint{D,R,T,longL}(c))
 end
 
 #right to left, square and multiply method
 """
-    ^(a::BFieldPoint{D,R,T}, b::Integer) where {D,R,T}
+    ^(a::BFieldPoint{D,R,T,L}, b::Integer) where {D,R,T,L}
 Returns a new element (of the binary field represented by {D,R}) which is the
 result of ``a^b``.
 """
-function ^(a::BFieldPoint{D,R,T}, b::Integer)::BFieldPoint{D,R,T} where {D,R,T}
-    c = one(BFieldPoint{D,R,T})
+function ^(a::BFieldPoint{D,R,T,L}, b::Integer)::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    c = one(BFieldPoint{D,R,T,L})
     squaring = a
 
     while b>0
@@ -425,11 +429,11 @@ function ^(a::BFieldPoint{D,R,T}, b::Integer)::BFieldPoint{D,R,T} where {D,R,T}
 end
 
 """
-    random(::Type{BFieldPoint{D,R,T}}) where {D,R,T}
+    random(::Type{BFieldPoint{D,R,T,L}}) where {D,R,T,L}
 Returns a random element of the specified field.
 """
-function random(::Type{BFieldPoint{D,R,T}})::BFieldPoint{D,R,T} where {D,R,T}
-    return BFieldPoint{D,R,T}(random(StaticUInt{ceil(Int,D/bitsize(T)),T}, D-1))
+function random(::Type{BFieldPoint{D,R,T,L}})::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    return BFieldPoint{D,R,T,L}(random(StaticUInt{L,T}, D-1))
 end
 
 """
@@ -442,11 +446,11 @@ function iszero(a::BFieldPoint)::Bool
 end
 
 """
-    zero(::Type{BFieldPoint{D,R,T}}) where {D,R,T}
+    zero(::Type{BFieldPoint{D,R,T,L}}) where {D,R,T,L}
 Returns the zero element of the specified field.
 """
-function zero(::Type{BFieldPoint{D,R,T}})::BFieldPoint{D,R,T} where {D,R,T}
-    return BFieldPoint{D,R,T}(zero(StaticUInt{ceil(Int,D/bitsize(T)),T}))
+function zero(::Type{BFieldPoint{D,R,T,L}})::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    return BFieldPoint{D,R,T,L}(zero(StaticUInt{L,T}))
 end
 
 """
@@ -458,18 +462,18 @@ function isone(a::BFieldPoint)::Bool
 end
 
 """
-    one(::Type{BFieldPoint{D,R,T}}) where {D,R,T}
+    one(::Type{BFieldPoint{D,R,T,L}}) where {D,R,T,L}
 Returns element 1 of the specified field.
 """
-function one(::Type{BFieldPoint{D,R,T}})::BFieldPoint{D,R,T} where {D,R,T}
-    return BFieldPoint{D,R,T}(one(StaticUInt{ceil(Int,D/bitsize(T)),T}))
+function one(::Type{BFieldPoint{D,R,T,L}})::BFieldPoint{D,R,T,L} where {D,R,T,L}
+    return BFieldPoint{D,R,T,L}(one(StaticUInt{L,T}))
 end
 
 """
-    sqrt(a::BFieldPoint{D,R,T}) where {D,R,T}
+    sqrt(a::BFieldPoint{D,R,T,L}) where {D,R,T,L}
 Returns ``b`` such that ``b^2 ≡ a \\pmod(R)``.
 """
-function sqrt(a::BFieldPoint{D,R,T})::BFieldPoint{D,R,T} where {D,R,T}
+function sqrt(a::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     #a^{2^{D-1}}
     for i in 1:(D-1)
         a *= a
@@ -487,12 +491,23 @@ function convert(::Type{BigInt}, a::BFieldPoint)::BigInt
 end
 
 #sec2 v2 (and v1), table 3:
-BFieldPoint113{T<:Unsigned} = BFieldPoint{113, UInt16(512+1),T}#v1 only
-BFieldPoint131{T<:Unsigned} = BFieldPoint{131, UInt16(256+8+4+1),T} #v1 only
-BFieldPoint163{T<:Unsigned} = BFieldPoint{163, UInt16(128+64+8+1),T}
-BFieldPoint193{T<:Unsigned} = BFieldPoint{193, (UInt16(1)<<15) + UInt16(1),T} #v1 only
-BFieldPoint233{T<:Unsigned} = BFieldPoint{233, (UInt128(1)<<74) + UInt128(1),T}
-BFieldPoint239{T<:Unsigned} = BFieldPoint{239, (UInt64(1)<<36) + UInt64(1),T}
-BFieldPoint283{T<:Unsigned} = BFieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1),T}
-BFieldPoint409{T<:Unsigned} = BFieldPoint{409, (UInt128(1)<<87) + UInt128(1),T}
-BFieldPoint571{T<:Unsigned} = BFieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1),T}
+BFieldPoint113{T<:Unsigned,L} = BFieldPoint{113, UInt16(512+1),T,L}#v1 only
+BFieldPoint131{T<:Unsigned,L} = BFieldPoint{131, UInt16(256+8+4+1),T,L} #v1 only
+BFieldPoint163{T<:Unsigned,L} = BFieldPoint{163, UInt16(128+64+8+1),T,L}
+BFieldPoint193{T<:Unsigned,L} = BFieldPoint{193, (UInt16(1)<<15) + UInt16(1),T,L} #v1 only
+BFieldPoint233{T<:Unsigned,L} = BFieldPoint{233, (UInt128(1)<<74) + UInt128(1),T,L}
+BFieldPoint239{T<:Unsigned,L} = BFieldPoint{239, (UInt64(1)<<36) + UInt64(1),T,L}
+BFieldPoint283{T<:Unsigned,L} = BFieldPoint{283, (UInt16(1)<<12) + UInt16(128+32+1),T,L}
+BFieldPoint409{T<:Unsigned,L} = BFieldPoint{409, (UInt128(1)<<87) + UInt128(1),T,L}
+BFieldPoint571{T<:Unsigned,L} = BFieldPoint{571, (UInt16(1)<<10) + UInt16(32+4+1),T,L}
+
+B(D::Integer, R::Integer, T::Type{U}) where U<:Unsigned = BFieldPoint{D, R, T, ceil(Int,D/bitsize(T))}
+B113(T) = B(113, UInt16(512+1),T)
+B131(T) = B(131, UInt16(256+8+4+1),T)
+B163(T) = B(163, UInt16(128+64+8+1),T)
+B193(T) = B(193, (UInt16(1)<<15) + UInt16(1),T)
+B233(T) = B(233, (UInt128(1)<<74) + UInt128(1),T)
+B239(T) = B(239, (UInt64(1)<<36) + UInt64(1),T)
+B283(T) = B(283, (UInt16(1)<<12) + UInt16(128+32+1),T)
+B409(T) = B(409, (UInt128(1)<<87) + UInt128(1),T)
+B571(T) = B(571, (UInt16(1)<<10) + UInt16(32+4+1),T)

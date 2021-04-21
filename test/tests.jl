@@ -23,8 +23,9 @@ function testcurve(curve, verbose=true)
 end
 
 @testset "Binary Field" begin
-    x = random(BFieldPoint163{UInt})
-    y = random(BFieldPoint163{UInt})
+    f = B163(UInt)
+    x = random(f)
+    y = random(f)
     @test x*y == y*x #test commutativity for mult
     @test x+y == y+x #test commutativity for add
     @test iszero(x+x) #test doubling

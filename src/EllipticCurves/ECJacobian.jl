@@ -1,5 +1,5 @@
 """
-    ECPointJacobian{D,R,T} <: AbstractECPoint{D,R,T}
+    ECPointJacobian{B} <: AbstractECPoint{B}
 Represents a point on an elliptic curve over the field represented by D and R.
 Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on.
 
@@ -9,11 +9,11 @@ Each point ``(x, y)`` on the curve is represented by a set of equivalent Jacobia
 ``\\{(\\lambda^2 x, \\lambda^3 y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
-struct ECPointJacobian{D,R,T} <: AbstractECPoint{D,R,T}
-    x::BFieldPoint{D,R,T}
-    y::BFieldPoint{D,R,T}
-    z::BFieldPoint{D,R,T}
-    ec::Ref{EC{D,R,T}}
+struct ECPointJacobian{B} <: AbstractECPoint{B}
+    x::B
+    y::B
+    z::B
+    ec::Ref{EC{B}}
 end
 
 """
@@ -24,17 +24,17 @@ function repr(p::ECPointJacobian)::String
     return "("*repr(p.x)*", "*repr(p.y)*", "*repr(p.z)*")"
 end
 
-function ==(p1::ECPointJacobian{D,R,T}, p2::ECPointJacobian{D,R,T})::Bool where {D,R,T}
+function ==(p1::ECPointJacobian{B}, p2::ECPointJacobian{B})::Bool where B
     z1_2 = square(p1.z)
     z2_2 = square(p2.z)
     return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*z2_2==p2.x*z1_2 && p1.y*p2.z*z2_2==p2.y*p1.z*z1_2
 end
 
-function +(p1::ECPointJacobian{D,R,T}, p2::ECPointJacobian{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
+function +(p1::ECPointJacobian{BF}, p2::ECPointJacobian{BF})::ECPointJacobian{BF} where BF
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
-    if p1==-p2 return zero(ECPointJacobian{D,R,T}, p1.ec) end
+    if p1==-p2 return zero(ECPointJacobian{BF}, p1.ec) end
     if p1==p2 return double(p1) end
 
     #Adds: 8
@@ -58,17 +58,17 @@ function +(p1::ECPointJacobian{D,R,T}, p2::ECPointJacobian{D,R,T})::ECPointJacob
     y3 = A*(p1.x*z3_2 + t)
     y3 += C*p2.z*(t*p1.z + p1.y*z3_2)
 
-    return ECPointJacobian{D,R,T}(x3, y3, z3, p1.ec)
+    return ECPointJacobian{BF}(x3, y3, z3, p1.ec)
 end
 
-function -(p::ECPointJacobian{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
+function -(p::ECPointJacobian{B})::ECPointJacobian{B} where B
     if iszero(p) return p end
-    return ECPointJacobian{D,R,T}(p.x, p.x+p.y, p.z, p.ec)
+    return ECPointJacobian{B}(p.x, p.x+p.y, p.z, p.ec)
 end
 
-function double(p::ECPointJacobian{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
+function double(p::ECPointJacobian{BF})::ECPointJacobian{BF} where BF
     if iszero(p) return p end
-    if p==-p return zero(ECPointJacobian{D,R,T}, p.ec) end
+    if p==-p return zero(ECPointJacobian{BF}, p.ec) end
 
     #Adds: 5
     #Mults: 10
@@ -90,15 +90,15 @@ function double(p::ECPointJacobian{D,R,T})::ECPointJacobian{D,R,T} where {D,R,T}
     y_new = B * square(p.x*z_new)
     y_new += (A+B)*x_new*z_4
 
-    return ECPointJacobian{D,R,T}(x_new, y_new, z_new, p.ec)
+    return ECPointJacobian{BF}(x_new, y_new, z_new, p.ec)
 end
 
-function *(p::ECPointJacobian{D,R,T}, n::Integer)::ECPointJacobian{D,R,T} where {D,R,T}
+function *(p::ECPointJacobian{B}, n::Integer)::ECPointJacobian{B} where B
     if iszero(p) return p end
-    if n==0 return zero(ECPointJacobian{D,R,T}, p.ec) end
+    if n==0 return zero(ECPointJacobian{B}, p.ec) end
     if n==1 return p end
 
-    result = zero(ECPointJacobian{D,R,T}, p.ec)
+    result = zero(ECPointJacobian{B}, p.ec)
     doubling = p
     while n>0
         if n&1==1
@@ -123,12 +123,12 @@ function iszero(p::ECPointJacobian)::Bool
 end
 
 """
-    zero(::Type{ECPointJacobian}, ec::EC{D,R,T}) where {D,R,T}
+    zero(::Type{ECPointJacobian}, ec::EC{B}) where B
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointJacobian}, ec::Ref{EC{D,R,T}})::ECPointJacobian{D,R,T} where {D,R,T}
-    return ECPointJacobian{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
+function zero(::Type{ECPointJacobian}, ec::Ref{EC{B}})::ECPointJacobian{B} where B
+    return ECPointJacobian{B}(B(0), B(0), B(0), ec)
 end
-function zero(::Type{ECPointJacobian{D,R,T}}, ec::Ref{EC{D,R,T}})::ECPointJacobian{D,R,T} where {D,R,T}
-    return ECPointJacobian{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
+function zero(::Type{ECPointJacobian{B}}, ec::Ref{EC{B}})::ECPointJacobian{B} where B
+    return ECPointJacobian{B}(B(0), B(0), B(0), ec)
 end

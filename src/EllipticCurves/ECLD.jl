@@ -1,5 +1,5 @@
 """
-    ECPointLD{D,R,T} <: AbstractECPoint{D,R,T}
+    ECPointLD{B} <: AbstractECPoint{B}
 Represents a point on an elliptic curve over the field represented by D and R.
 Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on.
 
@@ -9,11 +9,11 @@ Each (affine) point ``(x, y)`` is represented by a set of Lopez-Dahab points,
 ``\\{(\\lambda x, \\lambda^2 y, \\lambda) : \\lambda \\in K^* \\}``
 (where ``K^*`` is the binary field that the curve is based on).
 """
-struct ECPointLD{D,R,T} <: AbstractECPoint{D,R,T}
-    x::BFieldPoint{D,R,T}
-    y::BFieldPoint{D,R,T}
-    z::BFieldPoint{D,R,T}
-    ec::Ref{EC{D,R,T}}
+struct ECPointLD{B} <: AbstractECPoint{B}
+    x::B
+    y::B
+    z::B
+    ec::Ref{EC{B}}
 end
 
 """
@@ -24,15 +24,15 @@ function repr(p::ECPointLD)::String
     return "("*repr(p.x)*", "*repr(p.y)*", "*repr(p.z)*")"
 end
 
-function ==(p1::ECPointLD{D,R,T}, p2::ECPointLD{D,R,T})::Bool where {D,R,T}
+function ==(p1::ECPointLD{B}, p2::ECPointLD{B})::Bool where B
     return iszero(p1)==iszero(p2) && p1.ec==p2.ec && p1.x*p2.z==p2.x*p1.z && p1.y*square(p2.z)==p2.y*square(p1.z)
 end
 
-function +(p1::ECPointLD{D,R,T}, p2::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
+function +(p1::ECPointLD{BF}, p2::ECPointLD{BF})::ECPointLD{BF} where BF
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
-    if p1==-p2 return zero(ECPointLD{D,R,T}, p1.ec) end
+    if p1==-p2 return zero(ECPointLD{BF}, p1.ec) end
     if p1==p2 return double(p1) end
 
     #Adds: 8
@@ -54,17 +54,17 @@ function +(p1::ECPointLD{D,R,T}, p2::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {
     y3 = A*(p1.x*z3 + t) + (t*p1.z + p1.y*z3)*E
     y3 *= E
 
-    return ECPointLD{D,R,T}(x3, y3, z3, p1.ec)
+    return ECPointLD{BF}(x3, y3, z3, p1.ec)
 end
 
-function -(p::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
+function -(p::ECPointLD{B})::ECPointLD{B} where B
     if iszero(p) return p end
-    return ECPointLD{D,R,T}(p.x, p.x+p.y, p.z, p.ec)
+    return ECPointLD{B}(p.x, p.x+p.y, p.z, p.ec)
 end
 
-function double(p::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
+function double(p::ECPointLD{BF})::ECPointLD{BF} where BF
     if iszero(p) return p end
-    if p==-p return zero(ECPointLD{D,R,T}, p.ec) end
+    if p==-p return zero(ECPointLD{BF}, p.ec) end
 
     #Adds: 4
     #Mults: 6
@@ -83,15 +83,15 @@ function double(p::ECPointLD{D,R,T})::ECPointLD{D,R,T} where {D,R,T}
 
     y_new = square(x_2) * z_new + x_new*B*AB
 
-    return ECPointLD{D,R,T}(x_new, y_new, z_new, p.ec)
+    return ECPointLD{BF}(x_new, y_new, z_new, p.ec)
 end
 
-function *(p::ECPointLD{D,R,T}, n::Integer)::ECPointLD{D,R,T} where {D,R,T}
+function *(p::ECPointLD{B}, n::Integer)::ECPointLD{B} where B
     if iszero(p) return p end
-    if n==0 return zero(ECPointLD{D,R,T}, p.ec) end
+    if n==0 return zero(ECPointLD{B}, p.ec) end
     if n==1 return p end
 
-    result = zero(ECPointLD{D,R,T}, p.ec)
+    result = zero(ECPointLD{B}, p.ec)
     doubling = p
     while n>0
         if n&1==1
@@ -116,12 +116,12 @@ function iszero(p::ECPointLD)::Bool
 end
 
 """
-    zero(::Type{ECPointLD}, ec::EC{D,R,T}) where {D,R,T}
+    zero(::Type{ECPointLD}, ec::EC{B}) where B
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointLD}, ec::Ref{EC{D,R,T}})::ECPointLD{D,R,T} where {D,R,T}
-    return ECPointLD{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
+function zero(::Type{ECPointLD}, ec::Ref{EC{B}})::ECPointLD{B} where B
+    return ECPointLD{B}(B(0), B(0), B(0), ec)
 end
-function zero(::Type{ECPointLD{D,R,T}}, ec::Ref{EC{D,R,T}})::ECPointLD{D,R,T} where {D,R,T}
-    return ECPointLD{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
+function zero(::Type{ECPointLD{B}}, ec::Ref{EC{B}})::ECPointLD{B} where B
+    return ECPointLD{B}(B(0), B(0), B(0), ec)
 end

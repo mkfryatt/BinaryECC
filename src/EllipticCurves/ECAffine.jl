@@ -1,22 +1,22 @@
 """
-    ECPointAffine{D,R,T} <: AbstractECPoint{D,R,T}
+    ECPointAffine{B} <: AbstractECPoint{B}
 Represents a point on an elliptic curve over the field represented by D and R.
 Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
 
 ``E: y^2 +  xy = x^3 + ax^2 + b``
 """
-struct ECPointAffine{D,R,T} <: AbstractECPoint{D,R,T}
-    x::BFieldPoint{D,R,T}
-    y::BFieldPoint{D,R,T}
-    ec::Ref{EC{D,R,T}}
+struct ECPointAffine{B} <: AbstractECPoint{B}
+    x::B
+    y::B
+    ec::Ref{EC{B}}
 end
 
 """
-    ECPointAffine(s::String, ec::EC{D,R,T}) where {D,R,T}
+    ECPointAffine(s::String, ec::EC{B}) where B
 Convert a hex string to a point on the given elliptic curve
 using the procedure in SEC 2 (version 2), section 2.3.4.
 """
-function ECPointAffine(s::String, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} where {D,R,T}
+function ECPointAffine(s::String, ec::Ref{EC{BFieldPoint{D,R,T,L}}})::ECPointAffine{BFieldPoint{D,R,T,L}} where {D,R,T,L}
     s = replace(s, " " => "")
 
     #point is id
@@ -30,8 +30,8 @@ function ECPointAffine(s::String, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} wher
         throw(ArgumentError("Octet string must start with '04'."))
     end
 
-    x = BFieldPoint{D,R,T}(s[3:4+2*floor(Int16, D / 8)])
-    y = BFieldPoint{D,R,T}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
+    x = BFieldPoint{D,R,T,L}(s[3:4+2*floor(Int16, D / 8)])
+    y = BFieldPoint{D,R,T,L}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
 
     return ECPointAffine(x, y, ec)
 end
@@ -45,25 +45,25 @@ function repr(p::ECPointAffine)::String
 end
 
 """
-    ==(p1::ECPointAffine{D,R,T}, p2::ECPointAffine{D,R,T}) where {D,R,T}
+    ==(p1::ECPointAffine{B}, p2::ECPointAffine{B}) where B
 Two points are equal iff they have the same ``x`` and ``y`` coordinate,
  and are on the same elliptic curve.
 """
-function ==(p1::ECPointAffine{D,R,T}, p2::ECPointAffine{D,R,T})::Bool where {D,R,T}
+function ==(p1::ECPointAffine{B}, p2::ECPointAffine{B})::Bool where B
     return p1.x==p2.x && p1.y==p2.y && iszero(p1)==iszero(p2) && p1.ec==p2.ec
 end
 
 """
-    +(p1::ECPointAffine{D,R,T}, p2::ECPointAffine{D,R,T}) where {D,R,T}
+    +(p1::ECPointAffine{B}, p2::ECPointAffine{B}) where B
 Returns ``p_1+p_2``.
 
 If the points are not on the same curve, this will throw an ECMismatchException.
 """
-function +(p1::ECPointAffine{D,R,T}, p2::ECPointAffine{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
+function +(p1::ECPointAffine{B}, p2::ECPointAffine{B})::ECPointAffine{B} where B
     if p1.ec!=p2.ec throw(ECMismatchException()) end
     if iszero(p1) return p2 end
     if iszero(p2) return p1 end
-    if p1==-p2 return zero(ECPointAffine{D,R,T}, p1.ec) end
+    if p1==-p2 return zero(ECPointAffine{B}, p1.ec) end
     if p1==p2 return double(p1) end
 
     #Adds: 8
@@ -78,21 +78,21 @@ function +(p1::ECPointAffine{D,R,T}, p2::ECPointAffine{D,R,T})::ECPointAffine{D,
 end
 
 """
-    -(p::ECPointAffine{D,R,T}) where {D,R,T}
+    -(p::ECPointAffine{B}) where B
 Returns additive inverse of the given point, ``-p``.
 """
-function -(p::ECPointAffine{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
+function -(p::ECPointAffine{B})::ECPointAffine{B} where B
     if iszero(p) return p end
     return ECPointAffine(p.x, p.x+p.y, p.ec)
 end
 
-function double(p::ECPointAffine{D,R,T}) where {D,R,T}
+function double(p::ECPointAffine{B}) where B
     return double_threaded(p)
 end
 
-function double_standard(p::ECPointAffine{D,R,T}) where {D,R,T}
+function double_standard(p::ECPointAffine{B}) where B
     if iszero(p) return p end
-    if p==-p return zero(ECPointAffine{D,R,T}, p.ec) end
+    if p==-p return zero(ECPointAffine{B}, p.ec) end
 
     #Adds: 5
     #Mults: 2
@@ -104,20 +104,20 @@ function double_standard(p::ECPointAffine{D,R,T}) where {D,R,T}
     return ECPointAffine(x_new, y_new, p.ec)
 end
 
-function double_threaded(p::ECPointAffine{D,R,T}) where {D,R,T}
+function double_threaded(p::ECPointAffine{B}) where B
     if iszero(p) return p end
-    if p==-p return zero(ECPointAffine{D,R,T}, p.ec) end
+    if p==-p return zero(ECPointAffine{B}, p.ec) end
 
     lambda = p.x + (p.y / p.x)
     x_new_task = Threads.@spawn square($lambda) + $lambda + $(p.ec[].a)
     y_new = square(p.x)
-    x_new::BFieldPoint{D,R,T} = fetch(x_new_task)
+    x_new::B = fetch(x_new_task)
     y_new += lambda*x_new + x_new
     return ECPointAffine(x_new, y_new, p.ec)
 end
 
 """
-    mult_mont_affine(p::ECPointAffine{D,R,T}, n::Integer) where {D,R,T}
+    mult_mont_affine(p::ECPointAffine{B}, n::Integer) where B
 Returns ``p \\cdot n``.
 
 More resistant to timing attacks than the standard double and add algorithm.
@@ -125,7 +125,7 @@ More resistant to timing attacks than the standard double and add algorithm.
 Fast Multiplication on Elliptic Curves over ``GF(2^m)`` without Precomputation,
 Algorithm 2A: Montgomery Scalar Multiplication.
 """
-function mult_mont_affine(p::ECPointAffine{D,R,T}, n::I)::ECPointAffine{D,R,T} where {D,R,T} where I<:Integer
+function mult_mont_affine(p::ECPointAffine{B}, n::I)::ECPointAffine{B} where B where I<:Integer
     if n==0 || iszero(p) return p end
     if n<0 return mont_pow_ladder(-p, -n) end
 
@@ -140,7 +140,7 @@ function mult_mont_affine(p::ECPointAffine{D,R,T}, n::I)::ECPointAffine{D,R,T} w
         if x1==x2
             #ie p1==-p2
             if i==0
-                return zero(ECPointAffine{D,R,T}, p.ec)
+                return zero(ECPointAffine{B}, p.ec)
             else
                 #think of a better way to recover here
                 #because this repeats a lot of the arithmetic that has already been done
@@ -166,13 +166,13 @@ end
 
 #needed for montgomery's powering ladder
 #finds y1 given that (x1, y1) + p == (x2, y2)
-function find_point(x1::BFieldPoint{D,R,T}, x2::BFieldPoint{D,R,T}, p::ECPointAffine{D,R,T})::ECPointAffine{D,R,T} where {D,R,T}
+function find_point(x1::B, x2::B, p::ECPointAffine{B})::ECPointAffine{B} where B
     r1 = x1+p.x
     r2 = x2+p.x
     y1 = r1*r2 + square(p.x) + p.y
     y1 *= r1/p.x
     y1 += p.y
-    return ECPointAffine{D,R,T}(x1, y1, p.ec)
+    return ECPointAffine{B}(x1, y1, p.ec)
 end
 
 """
@@ -192,13 +192,13 @@ function iszero(p::ECPointAffine)::Bool
 end
 
 """
-    zero(::Type{ECPointAffine, ec::EC{D,R,T}) where {D,R,T}
+    zero(::Type{ECPointAffine, ec::EC{B}) where B
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointAffine}, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} where {D,R,T}
-    return ECPointAffine{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
+function zero(::Type{ECPointAffine}, ec::Ref{EC{B}})::ECPointAffine{B} where B
+    return ECPointAffine{B}(B(0), B(0), ec)
 end
 
-function zero(::Type{ECPointAffine{D,R,T}}, ec::Ref{EC{D,R,T}})::ECPointAffine{D,R,T} where {D,R,T}
-    return ECPointAffine{D,R,T}(BFieldPoint{D,R,T}(0), BFieldPoint{D,R,T}(0), ec)
+function zero(::Type{ECPointAffine{B}}, ec::Ref{EC{B}})::ECPointAffine{B} where B
+    return ECPointAffine{B}(B(0), B(0), ec)
 end

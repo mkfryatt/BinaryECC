@@ -116,6 +116,16 @@ export
     BFieldPoint239,
     BFieldPoint283,
     BFieldPoint409,
-    BFieldPoint571
+    BFieldPoint571,
+
+    B113,
+    B131,
+    B163,
+    B193,
+    B233,
+    B239,
+    B283,
+    B409,
+    B571
 
 end

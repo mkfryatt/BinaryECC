@@ -7,13 +7,13 @@ struct ECMismatchException <: Exception end
 
 
 """
-    AbstractECPoint{D,R,T}
+    AbstractECPoint{B}
 Abstract type for points on an elliptic curve.
 """
-abstract type AbstractECPoint{D,R,T} end
+abstract type AbstractECPoint{B} end
 
 """
-    EC{D,R,T}
+    EC{B}
 Represents a non-supersingular elliptic curve over the
 field given by D and R.
 
@@ -21,9 +21,9 @@ Contains fields ``a`` and ``b``, where:
 
 ``y^2 + xy = x^3 + ax^2 + b``
 """
-struct EC{D,R,T}
-    a::BFieldPoint{D,R,T}
-    b::BFieldPoint{D,R,T}
+struct EC{B}
+    a::B
+    b::B
 end
 
 """
@@ -36,14 +36,14 @@ function repr(ec::EC)
 end
 
 """
-    ==(ec1::EC{D,R,T}, ec2::EC{D,R,T}) where {D,R,T}
+    ==(ec1::EC{B}, ec2::EC{B}) where B
 Two elliptic curves are equal if they have the
 same ``a`` and ``b`` values, and defined over the same field.
 """
-function ==(ec1::EC{D,R,T}, ec2::EC{D,R,T}) where {D,R,T}
+function ==(ec1::EC{B}, ec2::EC{B}) where B
     return ec1.a==ec2.a && ec1.b==ec2.b
 end
-function ==(ec1::Ref{EC{D,R,T}}, ec2::Ref{EC{D,R,T}}) where {D,R,T}
+function ==(ec1::Ref{EC{B}}, ec2::Ref{EC{B}}) where B
     return ec1[] === ec2[]
 end
 
@@ -51,7 +51,7 @@ end
     -(p1::AbstractECPoint, p2::AbstractECPoint)
 Returns ``p_1-p_2``.
 """
-function -(p1::AbstractECPoint{D,R,T}, p2::AbstractECPoint{D,R,T}) where {D,R,T}
+function -(p1::AbstractECPoint{B}, p2::AbstractECPoint{B}) where B
     return p1 + (-p2)
 end
 
@@ -144,14 +144,14 @@ function naf(k::Integer, w::Int)
 end
 
 """
-    *(p::AbstractECPoint{D,R,T}, n::Integer) where {D,R,T}
+    *(p::AbstractECPoint{B}, n::Integer) where B
 Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
 """
-function *(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+function *(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     return mult_window(P, k, 4)
 end
 
-function mult_standard(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 
@@ -166,7 +166,7 @@ function mult_standard(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D
     return Q
 end
 
-function mult_threaded(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+function mult_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 
@@ -180,7 +180,7 @@ function mult_threaded(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D
 end
 
 #windowed scalar mult, left to right
-function mult_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractECPoint{D,R,T} where {D,R,T}
+function mult_window(P::AbstractECPoint{B}, k::Integer, w::Int=1)::AbstractECPoint{B} where B
     if w==1 return mult_standard(P, k) end
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -199,13 +199,13 @@ function mult_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractE
 end
 
 """
-    mult_naf(p::AbstractECPoint{D,R,T}, n::Integer) where {D,R,T}
+    mult_naf(p::AbstractECPoint{B}, n::Integer) where B
 Returns ``p \\cdot n``.
 
 Uses the binary NAF multiplication method described in Guide to Elliptic Curve Cryptography,
 algorithm 3.31.
 """
-function mult_bnaf(P::AbstractECPoint{D,R,T}, k::Integer)::AbstractECPoint{D,R,T} where {D,R,T}
+function mult_bnaf(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 
@@ -226,7 +226,7 @@ end
 
 #Guide to ECC, algorithm 3.38
 #Window NAF method for point multiplication
-function mult_bnaf_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::AbstractECPoint{D,R,T} where {D,R,T}
+function mult_bnaf_window(P::AbstractECPoint{B}, k::Integer, w::Int=1)::AbstractECPoint{B} where B
     if w==1 return mult_bnaf(P, k) end
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -265,7 +265,7 @@ function mult_bnaf_window(P::AbstractECPoint{D,R,T}, k::Integer, w::Int=1)::Abst
 end
 
 #precompute array of scalar mults of P
-function precompute(P::AbstractECPoint{D,R,T}, n::Int, step::Int) where {D,R,T}
+function precompute(P::AbstractECPoint{B}, n::Int, step::Int) where B
     precomp::Array{typeof(P),1} = []
     Pn = P*step
     append!(precomp, [P])
@@ -277,7 +277,7 @@ end
 
 #Guide to ECC, algorithm 3.36
 #Window NAF method for point multiplication
-function mult_wnaf(P::AbstractECPoint{D,R,T}, k::Integer, w::Int)::AbstractECPoint{D,R,T} where {D,R,T}
+function mult_wnaf(P::AbstractECPoint{B}, k::Integer, w::Int)::AbstractECPoint{B} where B
     if w==1 return mult_bnaf(P, k) end
 
     if k<0 return (-P)*(-k) end

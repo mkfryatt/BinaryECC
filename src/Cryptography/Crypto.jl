@@ -1,12 +1,12 @@
 """
-    ECKeyPair{D,R,Type}
+    ECKeyPair{B}
 Represents an elliptic curve key pair (described in SEC 1, version 2, 3.2) with
  fields ``d`` and ``Q`` (where ``Q = d \\cdot G``, and ``G`` is the generator of
   the curve domain paramters used to generate this key pair).
 """
-struct ECKeyPair{D,R,Type}
+struct ECKeyPair{B}
     d::PFieldPoint
-    Q::ECPointAffine{D,R,Type}
+    Q::ECPointAffine{B}
 end
 
 
@@ -20,7 +20,7 @@ struct ECDSASignature
     s::PFieldPoint
 end
 
-function ==(ukey::ECKeyPair{D,R,Type}, vkey::ECKeyPair{D,R,Type}) where {D,R,Type}
+function ==(ukey::ECKeyPair{B}, vkey::ECKeyPair{B}) where B
     return ukey.d==vkey.d && ukey.Q==vkey.Q
 end
 
@@ -31,25 +31,25 @@ end
 #sec1 v2, 3.2.1
 #Elliptic Curve Key Pair Generation Primitive
 """
-    generate_keypair(T::CurveDomainParams{D,R,Type}) where {D,R,Type}
+    generate_keypair(T::CurveDomainParams{B}) where B
 Gnerates a new random ECKeyPair associated with T, as described in SEC 1 (version 2)
  3.2.1.
 """
-function generate_keypair(T::CurveDomainParams{D,R,Type}) where {D,R,Type}
+function generate_keypair(T::CurveDomainParams{B}) where B
     d = random(PFieldPoint, T.n)
     Q = T.G*d
-    return ECKeyPair{D,R,Type}(d, Q)
+    return ECKeyPair{B}(d, Q)
 end
 
 #sec1 v2, 3.2.2.1
 #Elliptic Curve Public Key Validation Primitive
 """
-    isvalid(T::CurveDomainParams{D,R,Type}, Q::ECPointAffine{D,R,Type}) where {D,R,Type}
+    isvalid(T::CurveDomainParams{B}, Q::ECPointAffine{B}) where B
 Returns true if ``Q`` is a valid public key associated with the curve domain
  parameters ``T``, using the procedure in SEC 1 (version 2) 3.2.2.1, and false
  otherwise.
 """
-function isvalid(T::CurveDomainParams{D,R,Type}, Q::ECPointAffine{D,R,Type}) where {D,R,Type}
+function isvalid(T::CurveDomainParams{B}, Q::ECPointAffine{B}) where B
     #1
     if iszero(Q) return false end
 
@@ -70,13 +70,13 @@ end
 #sec1 v2, 4.1.3
 #Signing Operation
 """
-    ecdsa_sign(T::CurveDomainParams{D,R,Type}, U::ECKeyPair{D,R,Type}, M::String) where {D,R,Type}
+    ecdsa_sign(T::CurveDomainParams{B}, U::ECKeyPair{B}, M::String) where B
 Creates an ECDSASignature using the key pair ``U`` (associated with the curve
  domain parameters ``T``) for the message ``M`` (a string).
 
 This follows the signing  procedure described in SEC 1 (version 2) 4.1.3.
 """
-function ecdsa_sign(T::CurveDomainParams{D,R,Type}, U::ECKeyPair{D,R,Type}, M::String) where {D,R,Type}
+function ecdsa_sign(T::CurveDomainParams{B}, U::ECKeyPair{B}, M::String) where B
     #loops until it chooses ephemeral key pair that results in nonzero r,s
     r, s = zero(PFieldPoint,T.n), zero(PFieldPoint,T.n)
     while true
@@ -108,12 +108,12 @@ end
 #sec1 v2, 4.1.4
 #Verifying Operation
 """
-    ecdsa_verify(T::CurveDomainParams{D,R,Type}, Q::ECPointAffine{D,R,Type}, sig::ECDSASignature, M::String) where {D,R,Type}
+    ecdsa_verify(T::CurveDomainParams{B}, Q::ECPointAffine{B}, sig::ECDSASignature, M::String) where B
 Returns true if ``\\textit{sig}`` is valid signature for message ``M`` and
  public key ``Q`` (associated with curve domain parameters ``T``), following the
  verifying operation described in SEC 1 (version 2) 4.1.4, and false otherwise.
 """
-function ecdsa_verify(T::CurveDomainParams{D,R,Type}, Q::ECPointAffine{D,R,Type}, sig::ECDSASignature, M::String) where {D,R,Type}
+function ecdsa_verify(T::CurveDomainParams{B}, Q::ECPointAffine{B}, sig::ECDSASignature, M::String) where B
     #1
     if !isvalid(sig.r) || !isvalid(sig.s) return false end
 
@@ -143,14 +143,14 @@ end
 #sec1 v2, 3.3.1
 #Elliptic Curve Diffie Hellman Primitive
 """
-    ecdh_calculate(T::CurveDomainParams{D,R,Type}, dU::PFieldPoint, QV::ECPointAffine{D,R,Type}) where {D,R,Type}
+    ecdh_calculate(T::CurveDomainParams{B}, dU::PFieldPoint, QV::ECPointAffine{B}) where B
 Calculates the shared secret value for entity "U"'s private key
  (``\\textit{dU}``) and entity "V"'s public key (``\\textit{QV}``), which are
  associated with curve domain parameters ``T``.
 
 This follows the procedure described in SEC 1 (version 2) 3.3.1.
 """
-function ecdh_calculate(T::CurveDomainParams{D,R,Type}, dU::PFieldPoint, QV::ECPointAffine{D,R,Type}) where {D,R,Type}
+function ecdh_calculate(T::CurveDomainParams{B}, dU::PFieldPoint, QV::ECPointAffine{B}) where B
     #check that QV is associated with T and valid
     if !isvalid(T, QV) return nothing end
 
@@ -177,12 +177,12 @@ function ecdh_deployment1(T::CurveDomainParams)
     return generate_keypair(T)
 end
 """
-    ecdh_deployment2(T::CurveDomainParams{D,R,Type}, QV::ECPointAffine{D,R,Type}) where {D,R,Type}
+    ecdh_deployment2(T::CurveDomainParams{B}, QV::ECPointAffine{B}) where B
 Performs the second stage of the ECDH deployment operation (described in SEC 1,
  version 2, 6.1.2) from the perspective of entity "U", using entity "V"'s
  public key (``\\textit{QV}``).
 """
-function ecdh_deployment2(T::CurveDomainParams{D,R,Type}, QV::ECPointAffine{D,R,Type}) where {D,R,Type}
+function ecdh_deployment2(T::CurveDomainParams{B}, QV::ECPointAffine{B}) where B
     #3
     #QV has been received
     #4
@@ -193,13 +193,13 @@ end
 #ECDH Key Agreement Operation
 #TODO finish
 """
-    ecdh_agreement(T::CurveDomainParams{D,R,Type}, ukey::ECKeyPair{D,R,Type}, QV::ECPointAffine{D,R,Type}) where {D,R,Type}
+    ecdh_agreement(T::CurveDomainParams{B}, ukey::ECKeyPair{B}, QV::ECPointAffine{B}) where B
 This performs the ECDH key agreement operation as described in SEC 1 (version 2) 6.1.3.
 
 It is performed from the perspective of entity "U", using their ECKeyPair ``\\textit{ukey}`` and
 the public key of entity "V" (``\\textit{QV}``).
 """
-function ecdh_agreement(T::CurveDomainParams{D,R,Type}, ukey::ECKeyPair{D,R,Type}, QV::ECPointAffine{D,R,Type}) where {D,R,Type}
+function ecdh_agreement(T::CurveDomainParams{B}, ukey::ECKeyPair{B}, QV::ECPointAffine{B}) where B
     #1
     z = ecdh_calculate(T, ukey.d, QV)
     return z
