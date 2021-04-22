@@ -1,37 +1,37 @@
-struct PFieldPointMismatchException <: Exception end
+struct PFieldEltMismatchException <: Exception end
 
-struct PFieldPoint
+struct PFieldElt
     value::BigInt
     p::BigInt
-    PFieldPoint(value::Union{BFieldElt,StaticUInt,Integer}, p::Union{BFieldElt,StaticUInt,Integer}) =
+    PFieldElt(value::Union{BFieldElt,StaticUInt,Integer}, p::Union{BFieldElt,StaticUInt,Integer}) =
         new(convert(BigInt, value)%p, convert(BigInt, p))
 end
 
-function ==(x::PFieldPoint, y::PFieldPoint)
-    if x.p!=y.p throw(PFieldPointMismatchException()) end
+function ==(x::PFieldElt, y::PFieldElt)
+    if x.p!=y.p throw(PFieldEltMismatchException()) end
     return x.value==y.value
 end
 
-function +(x::PFieldPoint, y::PFieldPoint)
-    if x.p!=y.p throw(PFieldPointMismatchException()) end
-    return PFieldPoint(x.value+y.value, x.p)
+function +(x::PFieldElt, y::PFieldElt)
+    if x.p!=y.p throw(PFieldEltMismatchException()) end
+    return PFieldElt(x.value+y.value, x.p)
 end
 
-function -(x::PFieldPoint)
-    return PFieldPoint(x.p-x.value, x.p)
+function -(x::PFieldElt)
+    return PFieldElt(x.p-x.value, x.p)
 end
 
-function -(x::PFieldPoint, y::PFieldPoint)
-    if x.p!=y.p throw(PFieldPointMismatchException()) end
+function -(x::PFieldElt, y::PFieldElt)
+    if x.p!=y.p throw(PFieldEltMismatchException()) end
     return x + (-y)
 end
 
-function *(x::PFieldPoint, y::PFieldPoint)
-    if x.p!=y.p throw(PFieldPointMismatchException()) end
-    return PFieldPoint(x.value*y.value, x.p)
+function *(x::PFieldElt, y::PFieldElt)
+    if x.p!=y.p throw(PFieldEltMismatchException()) end
+    return PFieldElt(x.value*y.value, x.p)
 end
 
-function inv(x::PFieldPoint)
+function inv(x::PFieldElt)
     if x.value==0 throw(DivideError()) end
     t, new_t = BigInt(0), BigInt(1)
     r, new_r = x.p, x.value
@@ -46,33 +46,33 @@ function inv(x::PFieldPoint)
         t = t+x.p
     end
 
-    return PFieldPoint(t, x.p)
+    return PFieldElt(t, x.p)
 end
 
-function /(x::PFieldPoint, y::PFieldPoint)
-    if x.p!=y.p throw(PFieldPointMismatchException()) end
+function /(x::PFieldElt, y::PFieldElt)
+    if x.p!=y.p throw(PFieldEltMismatchException()) end
     return x * inv(y)
 end
 
-function zero(::Type{PFieldPoint}, p::Integer)
-    return PFieldPoint(0, p)
+function zero(::Type{PFieldElt}, p::Integer)
+    return PFieldElt(0, p)
 end
 
-function one(::Type{PFieldPoint}, p::Integer)
-    return PFieldPoint(1, p)
+function one(::Type{PFieldElt}, p::Integer)
+    return PFieldElt(1, p)
 end
 
-function iszero(x::PFieldPoint)
+function iszero(x::PFieldElt)
     return x.value==0
 end
 
-function isone(x::PFieldPoint)
+function isone(x::PFieldElt)
     return x.value==1
 end
 
 #if log2(n)>=8hashlen, returns the digest as a BigInt
 #otherwise, returns the leftmost log2(n) bits as a BigInt
-function from_digest(::Type{PFieldPoint}, H, n)
+function from_digest(::Type{PFieldElt}, H, n)
     hashlen = 32
     len = ceil(Int, log2(n))
     e = BigInt(0)
@@ -93,19 +93,19 @@ function from_digest(::Type{PFieldPoint}, H, n)
             e += BigInt(H[32-i])<<(8*i)
         end
     end
-    return PFieldPoint(e, n)
+    return PFieldElt(e, n)
 end
 
-function isvalid(x::PFieldPoint)
+function isvalid(x::PFieldElt)
     return x.value<x.p
 end
 
-function random(::Type{PFieldPoint}, p::Integer)
-    return PFieldPoint(rand(1:p), p)
+function random(::Type{PFieldElt}, p::Integer)
+    return PFieldElt(rand(1:p), p)
 end
 
-function ^(x::PFieldPoint, y::Integer)
-    z = one(PFieldPoint, x.p)
+function ^(x::PFieldElt, y::Integer)
+    z = one(PFieldElt, x.p)
     squaring = x
     while y>0
         if y%2==1

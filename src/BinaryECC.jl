@@ -28,8 +28,8 @@ include("Cryptography/Crypto.jl")
 
 export
     BFieldElt,
-    PFieldPoint,
-    PFieldPointMismatchException,
+    PFieldElt,
+    PFieldEltMismatchException,
     StaticUInt,
 
     EC,

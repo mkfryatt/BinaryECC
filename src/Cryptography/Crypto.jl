@@ -5,7 +5,7 @@ Represents an elliptic curve key pair (described in SEC 1, version 2, 3.2) with
   the curve domain paramters used to generate this key pair).
 """
 struct ECKeyPair{B}
-    d::PFieldPoint
+    d::PFieldElt
     Q::ECPointAffine{B}
 end
 
@@ -16,8 +16,8 @@ Represents a signature produced by ECDSA (Elliptic Curve DSA), with the fields
  ``r`` and ``s`` (both integers).
 """
 struct ECDSASignature
-    r::PFieldPoint
-    s::PFieldPoint
+    r::PFieldElt
+    s::PFieldElt
 end
 
 function ==(ukey::ECKeyPair{B}, vkey::ECKeyPair{B}) where B
@@ -36,7 +36,7 @@ Gnerates a new random ECKeyPair associated with T, as described in SEC 1 (versio
  3.2.1.
 """
 function generate_keypair(T::CurveDomainParams{B}) where B
-    d = random(PFieldPoint, T.n)
+    d = random(PFieldElt, T.n)
     Q = T.G*d
     return ECKeyPair{B}(d, Q)
 end
@@ -78,13 +78,13 @@ This follows the signing  procedure described in SEC 1 (version 2) 4.1.3.
 """
 function ecdsa_sign(T::CurveDomainParams{B}, U::ECKeyPair{B}, M::String) where B
     #loops until it chooses ephemeral key pair that results in nonzero r,s
-    r, s = zero(PFieldPoint,T.n), zero(PFieldPoint,T.n)
+    r, s = zero(PFieldElt,T.n), zero(PFieldElt,T.n)
     while true
         #1
         ephemeral = generate_keypair(T)
 
         #2
-        r = PFieldPoint(ephemeral.Q.x, T.n)
+        r = PFieldElt(ephemeral.Q.x, T.n)
 
         #3
         if iszero(r) continue end
@@ -93,7 +93,7 @@ function ecdsa_sign(T::CurveDomainParams{B}, U::ECKeyPair{B}, M::String) where B
         H = sha256(M)
 
         #5
-        e = from_digest(PFieldPoint, H, T.n)
+        e = from_digest(PFieldElt, H, T.n)
 
         #6
         s = (e + r*U.d) / ephemeral.d
@@ -121,7 +121,7 @@ function ecdsa_verify(T::CurveDomainParams{B}, Q::ECPointAffine{B}, sig::ECDSASi
     H = sha256(M)
 
     #3
-    e = from_digest(PFieldPoint, H, T.n)
+    e = from_digest(PFieldElt, H, T.n)
 
     #4
     s_inv = inv(sig.s)
@@ -134,7 +134,7 @@ function ecdsa_verify(T::CurveDomainParams{B}, Q::ECPointAffine{B}, sig::ECDSASi
 
     #6
     #7
-    v = PFieldPoint(R1.x, T.n)
+    v = PFieldElt(R1.x, T.n)
 
     #8
     return v==sig.r
@@ -143,14 +143,14 @@ end
 #sec1 v2, 3.3.1
 #Elliptic Curve Diffie Hellman Primitive
 """
-    ecdh_calculate(T::CurveDomainParams{B}, dU::PFieldPoint, QV::ECPointAffine{B}) where B
+    ecdh_calculate(T::CurveDomainParams{B}, dU::PFieldElt, QV::ECPointAffine{B}) where B
 Calculates the shared secret value for entity "U"'s private key
  (``\\textit{dU}``) and entity "V"'s public key (``\\textit{QV}``), which are
  associated with curve domain parameters ``T``.
 
 This follows the procedure described in SEC 1 (version 2) 3.3.1.
 """
-function ecdh_calculate(T::CurveDomainParams{B}, dU::PFieldPoint, QV::ECPointAffine{B}) where B
+function ecdh_calculate(T::CurveDomainParams{B}, dU::PFieldElt, QV::ECPointAffine{B}) where B
     #check that QV is associated with T and valid
     if !isvalid(T, QV) return nothing end
 
