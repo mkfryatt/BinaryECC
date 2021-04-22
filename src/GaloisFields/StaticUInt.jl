@@ -75,7 +75,7 @@ function getbit(x::StaticUInt{L,T}, i::Int)::Int where {L,T}
     return x.value[block]>>bit & 1
 end
 
-#TODO doesn't work over block boundaries?
+#don't use over block boundaries
 function getbits(x::StaticUInt{L,T}, start::Int, len::Int)::Int where {L,T}
     blocksize = sizeof(T)*8
     bit = start%blocksize
@@ -230,25 +230,18 @@ function shiftedxor!(x::StaticUInt{L1,T}, y::StaticUInt{L2,T}, shift::Int)::Noth
         xor!(x, y)
         return
     end
+
+    #shifting by a whole number of blocks is simpler
     if shift%bitsize(T)==0
         word_shiftedxor!(x, y, shift ÷ bitsize(T))
         return
     end
 
+    #otherwise, each new block requires bits from two shifted blocks
     blocksize = 8*sizeof(T)
     blockshift = shift ÷ blocksize
     upperbits = shift % blocksize
 
-    #if the shift is a whole number of blocks
-    #the calculation is simpler because you don't need bitmasks
-    if upperbits==0
-        for i in 1:min(L1-blockshift, L2)
-            x.value[i+blockshift] ⊻= y.value[i]
-        end
-        return
-    end
-
-    #otherwise, each new block requires bits from two shifted blocks
     lowerbits = blocksize - upperbits
     lowermask = (T(1)<<lowerbits)-1
     uppermask = (T(1)<<upperbits)-1

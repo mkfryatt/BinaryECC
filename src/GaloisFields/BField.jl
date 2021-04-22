@@ -113,7 +113,8 @@ end
 Returns ``a \\cdot b`` using the right to left shift and add method.
 """
 function mult_shiftandadd(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
-    c = zero(StaticUInt{ceil(Int,2*D/bitsize(T)),T})
+    longL = ceil(Int,2*D/bitsize(T))
+    c = zero(StaticUInt{longL,T})
 
     for i in 0:(D-1)
         if getbit(a.value,i)==1
@@ -121,7 +122,7 @@ function mult_shiftandadd(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFi
         end
     end
 
-    return reduce(BFieldPoint{D,R,T,L}(c))
+    return reduce(BFieldPoint{D,R,T,longL}(c))
 end
 
 function mult_shiftandadd_window(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, window::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}

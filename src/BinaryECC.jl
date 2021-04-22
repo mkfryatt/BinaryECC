@@ -60,6 +60,7 @@ export
     one,
     reduce,
     random,
+    bitsize,
 
     #elliptic curve routines
     double,
