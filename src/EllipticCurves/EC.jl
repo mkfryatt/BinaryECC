@@ -148,7 +148,7 @@ end
 Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
 """
 function *(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
-    return mult_window(P, k, 4)
+    return mult_wnaf(P, k, 6)
 end
 
 function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
@@ -166,7 +166,7 @@ function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} wh
     return Q
 end
 
-function mult_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
+function mult_threaded(P::AbstractECPoint{BFieldPoint{D,R,T,L}}, k::Integer)::AbstractECPoint{BFieldPoint{D,R,T,L}} where {D,R,T,L}
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 
@@ -267,7 +267,7 @@ end
 #precompute array of scalar mults of P
 function precompute(P::AbstractECPoint{B}, n::Int, step::Int) where B
     precomp::Array{typeof(P),1} = []
-    Pn = P*step
+    Pn = mult_standard(P, step)
     append!(precomp, [P])
     for i in 2:n
         append!(precomp, [precomp[i-1]+Pn])

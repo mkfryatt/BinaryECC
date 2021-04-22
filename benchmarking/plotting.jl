@@ -22,8 +22,8 @@ function reduction_methods()
             title="$size",
             size = (300,200),
             label="Fast reduce",
-            xlabel=L"\log_2 \textrm{field size}",
-            ylabel=L"\textrm{time} / \mu s")
+            xlabel=L"\log_2 \mathrm{field size}",
+            ylabel=L"\mathrm{time} / \mu s")
 
         plot!(p, x_coords, standard_coords, yerror=standard_ci,
             legend= size==8,
@@ -42,8 +42,8 @@ function shiftandadd_vs_comb()
         open("benchmarking/shiftandadd_vs_comb/shiftandadd_vs_comb$size.txt", "r") do io
             x_coords = eval(Meta.parse(readline(io)))
             shift_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
-            comb_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
             shift_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            comb_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
             comb_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         end
 
@@ -51,14 +51,15 @@ function shiftandadd_vs_comb()
             title="$size",
             size = (300,200),
             label="Shift-and-add method",
-            xlabel=L"\log_2 \textrm{field size}",
-            ylabel=L"\textrm{time} / \mu s")
+            xlabel=L"\log_2 \mathrm{field size}",
+            ylabel=L"\mathrm{time} / \upmu\mathrm{s}")
 
         plot!(p, x_coords, comb_coords, yerror=comb_ci,
             legend= size==8,
             label="Comb method")
 
         savefig("benchmarking/shiftandadd_vs_comb/shiftandadd_vs_comb$size.tex")
+        #savefig("benchmarking/shiftandadd_vs_comb/shiftandadd_vs_comb$size")
     end
 end
 
@@ -67,18 +68,6 @@ function window(w, m)
     return (2^w *w)/2 + (m/w)*(1-0.5^w)
 end
 function windowsize_fieldmult()
-    x_coords = []
-    comb_coords, shift_coords, comb_ci, shift_ci = Dict(), Dict(), Dict(), Dict()
-    open("benchmarking/windowsize_fieldmult/fieldmult_windowsizes.txt", "r") do io
-        x_coords = eval(Meta.parse(readline(io)))
-        for w in [1,2,4,8]
-            comb_coords[w] = eval(Meta.parse(readline(io)))
-            comb_ci[w] = eval(Meta.parse(readline(io)))
-            shift_coords[w] = eval(Meta.parse(readline(io)))
-            shift_ci[w] = eval(Meta.parse(readline(io)))
-        end
-    end
-
     x_coords = [100, 600]
     p = plot()
     for w in [1,2,4,8]
@@ -86,37 +75,49 @@ function windowsize_fieldmult()
         plot!(p, x_coords, y_coords,
         size = (300,200),
         label="w=$w",
-        xlabel=L"\log_2 \textrm{field size}",
+        xlabel=L"\log_2 \mathrm{field size}",
         ylabel=L"t")
     end
     savefig("benchmarking/windowsize_fieldmult/windowsize_model.tex")
+    #savefig("benchmarking/windowsize_fieldmult/windowsize_model")
+
+    x_coords = []
+    comb_coords, shift_coords, comb_ci, shift_ci = Dict(), Dict(), Dict(), Dict()
+    open("benchmarking/windowsize_fieldmult/fieldmult_windowsizes.txt", "r") do io
+        x_coords = eval(Meta.parse(readline(io)))
+        for w in [1,2,4,8]
+            comb_coords[w] = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            comb_ci[w] = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            shift_coords[w] = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            shift_ci[w] = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        end
+    end
 
     p = plot(x_coords, shift_coords[1], yerror=shift_ci[1],
     title = "Shift-and-add method",
     size = (300,200),
     legend=false,
     label="w=1",
-    xlabel=L"\log_2 \textrm{field size}",
-    ylabel=L"\textrm{time} / \mu s")
+    xlabel=L"\log_2 \mathrm{field size}",
+    ylabel=L"\mathrm{time} / \upmu\mathrm{s}")
     for w in [2,4,8]
         plot!(x_coords, shift_coords[w], yerror=shift_ci[w], label="w=$w")
     end
     savefig("benchmarking/windowsize_fieldmult/windowsize_shiftandadd.tex")
+    #savefig("benchmarking/windowsize_fieldmult/windowsize_shiftandadd")
 
     p = plot(x_coords, comb_coords[1], yerror=comb_ci[1],
     title = "Comb method",
     legend=false,
     size = (300,200),
     label="w=1",
-    xlabel=L"\log_2 \textrm{field size}",
-    ylabel=L"\textrm{time} / \mu s")
+    xlabel=L"\log_2 \mathrm{field size}",
+    ylabel=L"\mathrm{time} / \upmu\mathrm{s}")
     for w in [2,4,8]
         plot!(x_coords, comb_coords[w], yerror=comb_ci[w], label="w=$w")
     end
     savefig("benchmarking/windowsize_fieldmult/windowsize_comb.tex")
-
-
-    return p
+    #savefig("benchmarking/windowsize_fieldmult/windowsize_comb")
 end
 
 function threads(w=1)
@@ -137,15 +138,15 @@ function threads(w=1)
     p = plot(x_coords, threads_coords, yerror=threads_ci,
         size = (300,200),
         label= w==1  ? "Multithreaded" : "Multithreaded, w=$w",
-        xlabel=L"\log_2 \textrm{field size}",
-        ylabel=L"\textrm{time} / \mu s")
+        xlabel=L"\log_2 \mathrm{field size}",
+        ylabel=L"\mathrm{time} / \upmu\mathrm{s}")
 
     plot!(p, x_coords, standard_coords, yerror=standard_ci,
         legend= true,
         label= w==1  ? "Single threaded" : "Single threaded, w=$w")
 
     savefig("benchmarking/$loc/$loc.tex")
-    savefig("benchmarking/$loc/$loc")
+    #savefig("benchmarking/$loc/$loc")
 end
 
 function windowsize_scalarmult_dicts(loc="mult_standard", ws=[1,2,4,8])
@@ -170,8 +171,8 @@ function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Window
     size = (300,200),
     legend=true,
     label="w=1",
-    xlabel=L"\log_2 \textrm{group size}",
-    ylabel=L"\textrm{time} / ms")
+    xlabel=L"\log_2 \mathrm{group size}",
+    ylabel=L"\mathrm{time} / \mathrm{ms}")
     for w in wsplot[2:length(wsplot)]
         if w!=1 plot!(x_coords, y_coords[w], yerror=ci[w], label="w=$w") end
     end
@@ -179,20 +180,22 @@ function windowsize_scalarmult(loc="mult_standard", title="Double-and-add Window
     savefig("benchmarking/$loc/$loc")
 end
 
-function best_scalarmult()
+function best_scalarmult(w1=4, w2=4, w3=6)
     (x_coords, daa_y, daa_ci) = windowsize_scalarmult_dicts()
     (x_coords, bnaf_y, bnaf_ci) = windowsize_scalarmult_dicts("mult_bnaf")
     (x_coords, wnaf_y, wnaf_ci) = windowsize_scalarmult_dicts("mult_wnaf", [1,2,3,4,5,6,7,8])
+    (x_coords, threaded_y, threaded_ci) = windowsize_scalarmult_dicts("mult_threaded", [1])
 
-    p = plot(x_coords, daa_y[4], yerror=daa_ci[4],
+    p = plot(x_coords, daa_y[w1], yerror=daa_ci[w1],
     size = (300,200),
     legend=true,
     label="Double-and-add, w=4",
-    xlabel=L"\log_2 \textrm{group size}",
-    ylabel=L"\textrm{time} / ms")
+    xlabel=L"\log_2 \mathrm{group size}",
+    ylabel=L"\mathrm{time} / \mathrm{ms}")
 
-    plot!(x_coords, bnaf_y[4], yerror=bnaf_ci[4], label="Binary NAF, w=4")
-    plot!(x_coords, wnaf_y[6], yerror=wnaf_ci[6], label="Width-6 NAF")
+    plot!(x_coords, bnaf_y[w2], yerror=bnaf_ci[w2], label="Binary NAF, w=4")
+    plot!(x_coords, wnaf_y[w3], yerror=wnaf_ci[w3], label="Width-6 NAF")
+    plot!(x_coords, threaded_y[1], yerror=threaded_ci[1], label="Threaded")
 
     savefig("benchmarking/scalar_mult/scalar_mult.tex")
     savefig("benchmarking/scalar_mult/scalar_mult")
@@ -214,15 +217,15 @@ function double_threads()
     p = plot(x_coords, threads_coords, yerror=threads_ci,
         size = (300,200),
         label= "Multithreaded",
-        xlabel=L"\log_2 \textrm{group order}",
-        ylabel=L"\textrm{time} / \mu s")
+        xlabel=L"\log_2 \mathrm{group order}",
+        ylabel=L"\mathrm{time} / \upmu\mathrm{s}")
 
     plot!(p, x_coords, standard_coords, yerror=standard_ci,
         legend= true,
         label= "Single threaded")
 
     savefig("benchmarking/threads_double/threads_double.tex")
-    savefig("benchmarking/threads_double/threads_double")
+    #savefig("benchmarking/threads_double/threads_double")
 end
 
 function mult_mont()
@@ -243,8 +246,8 @@ function mult_mont()
     p = plot(x_coords, threads_coords, yerror=threads_ci,
         size = (300,200),
         label= "Affine Montgomery powering ladder",
-        xlabel=L"\log_2 \textrm{group size}",
-        ylabel=L"\textrm{time} / ms")
+        xlabel=L"\log_2 \mathrm{group size}",
+        ylabel=L"\mathrm{time} / \mathrm{ms}")
 
     plot!(p, x_coords, standard_coords, yerror=standard_ci,
         legend= true,
@@ -280,14 +283,14 @@ function plot_package(package="gf", label="GaloisFields")
         p = plot(x_coords, becc_coords[r], yerror=becc_ci[r],
             size = (300,200),
             label= "BinaryECC",
-            xlabel=L"\log_2 \textrm{field size}",
-            ylabel=L"\textrm{time} / \mu s")
+            xlabel=L"\log_2 \mathrm{field size}",
+            ylabel=L"\mathrm{time} / \upmu\mathrm{s}")
 
         plot!(p, x_coords, other_coords, yerror=other_ci,
             legend= true,
             label= label)
 
         savefig("benchmarking/$package/$package-$op.tex")
-        savefig("benchmarking/$package/$package-$op")
+        #savefig("benchmarking/$package/$package-$op")
     end
 end

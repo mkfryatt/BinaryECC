@@ -87,7 +87,7 @@ function -(p::ECPointAffine{B})::ECPointAffine{B} where B
 end
 
 function double(p::ECPointAffine{B}) where B
-    return double_threaded(p)
+    return double_standard(p)
 end
 
 function double_standard(p::ECPointAffine{B}) where B

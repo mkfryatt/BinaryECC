@@ -239,7 +239,7 @@ end
 Returns ``a \\cdot b`` using a left to right comb method
 (described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
 """
-function mult_comb_ltr(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, w=1)::BFieldPoint{D,R,T,L} where {D,R,T,L}
+function mult_comb_ltr(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L})::BFieldPoint{D,R,T,L} where {D,R,T,L}
     c = zero(StaticUInt{2*L,T})
 
     for k in (bitsize(T)-1):-1:0
@@ -262,7 +262,7 @@ Returns ``a \\cdot b`` using a left to right comb method windowing
 Performs best with a window size of 4.
 """
 function mult_comb_window(a::BFieldPoint{D,R,T,L}, b::BFieldPoint{D,R,T,L}, window::Int)::BFieldPoint{D,R,T,L} where {D,R,T,L}
-    Bu = [small_mult(b, u) for u=0:(1<<window -1)]
+    Bu = [small_mult(b, u) for u=UInt8(0):UInt8(1<<window -1)]
     c = zero(StaticUInt{2*L,T})
 
     for k in ((bitsize(T)÷window)-1):-1:0
