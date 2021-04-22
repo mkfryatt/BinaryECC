@@ -16,7 +16,7 @@ end
 Convert a hex string to a point on the given elliptic curve
 using the procedure in SEC 2 (version 2), section 2.3.4.
 """
-function ECPointAffine(s::String, ec::EC{BFieldPoint{D,R,T,L}})::ECPointAffine{BFieldPoint{D,R,T,L}} where {D,R,T,L}
+function ECPointAffine(s::String, ec::EC{BFieldElt{D,R,T,L}})::ECPointAffine{BFieldElt{D,R,T,L}} where {D,R,T,L}
     s = replace(s, " " => "")
 
     #point is id
@@ -30,8 +30,8 @@ function ECPointAffine(s::String, ec::EC{BFieldPoint{D,R,T,L}})::ECPointAffine{B
         throw(ArgumentError("Octet string must start with '04'."))
     end
 
-    x = BFieldPoint{D,R,T,L}(s[3:4+2*floor(Int16, D / 8)])
-    y = BFieldPoint{D,R,T,L}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
+    x = BFieldElt{D,R,T,L}(s[3:4+2*floor(Int16, D / 8)])
+    y = BFieldElt{D,R,T,L}(s[5+2*floor(Int16, D / 8):6+4*floor(Int16, D / 8)])
 
     return ECPointAffine(x, y, ec)
 end

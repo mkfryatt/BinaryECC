@@ -14,7 +14,7 @@ macro fastreduce(D,R)
     prepend!(indices, [D_val])
 
     text = """
-    function reduce(a::BFieldPoint{$D,$R,T,L})::BFieldPoint{$D,$R,T,ceil(Int,$D/bitsize(T))} where {T,L}
+    function reduce(a::BFieldElt{$D,$R,T,L})::BFieldElt{$D,$R,T,ceil(Int,$D/bitsize(T))} where {T,L}
         b::StaticUInt{L,T} = copy(a.value)
         lastword = ceil(Int,$D/bitsize(T))
         for i in length(b):-1:(1+lastword)
@@ -35,7 +35,7 @@ macro fastreduce(D,R)
     end
 
     text *= """b.value[lastword] &= (T(1)<<extra)-1
-            return BFieldPoint{$D,$R,T,lastword}(changelength(b, lastword))
+            return BFieldElt{$D,$R,T,lastword}(changelength(b, lastword))
             end"""
     return eval(Meta.parse(text))
 end

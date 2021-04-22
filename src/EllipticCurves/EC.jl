@@ -166,7 +166,7 @@ function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} wh
     return Q
 end
 
-function mult_threaded(P::AbstractECPoint{BFieldPoint{D,R,T,L}}, k::Integer)::AbstractECPoint{BFieldPoint{D,R,T,L}} where {D,R,T,L}
+function mult_threaded(P::AbstractECPoint{BFieldElt{D,R,T,L}}, k::Integer)::AbstractECPoint{BFieldElt{D,R,T,L}} where {D,R,T,L}
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 

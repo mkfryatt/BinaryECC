@@ -3,7 +3,7 @@ struct PFieldPointMismatchException <: Exception end
 struct PFieldPoint
     value::BigInt
     p::BigInt
-    PFieldPoint(value::Union{BFieldPoint,StaticUInt,Integer}, p::Union{BFieldPoint,StaticUInt,Integer}) =
+    PFieldPoint(value::Union{BFieldElt,StaticUInt,Integer}, p::Union{BFieldElt,StaticUInt,Integer}) =
         new(convert(BigInt, value)%p, convert(BigInt, p))
 end
 

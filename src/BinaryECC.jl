@@ -27,7 +27,7 @@ include("Cryptography/CurveDomainParams.jl")
 include("Cryptography/Crypto.jl")
 
 export
-    BFieldPoint,
+    BFieldElt,
     PFieldPoint,
     PFieldPointMismatchException,
     StaticUInt,
@@ -109,15 +109,15 @@ export
     SECT571K1,
     SECT571R1,
 
-    BFieldPoint113,
-    BFieldPoint131,
-    BFieldPoint163,
-    BFieldPoint193,
-    BFieldPoint233,
-    BFieldPoint239,
-    BFieldPoint283,
-    BFieldPoint409,
-    BFieldPoint571,
+    BFieldElt113,
+    BFieldElt131,
+    BFieldElt163,
+    BFieldElt193,
+    BFieldElt233,
+    BFieldElt239,
+    BFieldElt283,
+    BFieldElt409,
+    BFieldElt571,
 
     B113,
     B131,
