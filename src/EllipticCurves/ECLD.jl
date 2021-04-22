@@ -13,7 +13,7 @@ struct ECPointLD{B} <: AbstractECPoint{B}
     x::B
     y::B
     z::B
-    ec::Ref{EC{B}}
+    ec::EC{B}
 end
 
 """
@@ -47,7 +47,7 @@ function +(p1::ECPointLD{BF}, p2::ECPointLD{BF})::ECPointLD{BF} where BF
 
     z3 = square(B)
 
-    x3 = A*(A+B) + B*(square(C) + p1.ec[].a*B)
+    x3 = A*(A+B) + B*(square(C) + p1.ec.a*B)
 
     t = x3*p1.z
 
@@ -79,7 +79,7 @@ function double(p::ECPointLD{BF})::ECPointLD{BF} where BF
 
     AB = A+B
 
-    x_new = A*AB + p.ec[].a*z_new
+    x_new = A*AB + p.ec.a*z_new
 
     y_new = square(x_2) * z_new + x_new*B*AB
 
@@ -104,7 +104,7 @@ function *(p::ECPointLD{B}, n::Integer)::ECPointLD{B} where B
 end
 
 function isvalid(p::ECPointLD)::Bool
-    return iszero(p) || (square(p.y) + p.x*p.y*p.z == p.x^3*p.z + p.ec[].a*square(p.x*p.z) + p.ec[].b*p.z^4)
+    return iszero(p) || (square(p.y) + p.x*p.y*p.z == p.x^3*p.z + p.ec.a*square(p.x*p.z) + p.ec.b*p.z^4)
 end
 
 """
@@ -119,9 +119,9 @@ end
     zero(::Type{ECPointLD}, ec::EC{B}) where B
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointLD}, ec::Ref{EC{B}})::ECPointLD{B} where B
+function zero(::Type{ECPointLD}, ec::EC{B})::ECPointLD{B} where B
     return ECPointLD{B}(B(0), B(0), B(0), ec)
 end
-function zero(::Type{ECPointLD{B}}, ec::Ref{EC{B}})::ECPointLD{B} where B
+function zero(::Type{ECPointLD{B}}, ec::EC{B})::ECPointLD{B} where B
     return ECPointLD{B}(B(0), B(0), B(0), ec)
 end

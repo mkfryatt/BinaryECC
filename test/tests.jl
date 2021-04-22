@@ -7,8 +7,8 @@ function testcurve(curve, verbose=true)
 
     for i in 1:4:length(tests)
         k = parse(BigInt, tests[i][5:length(tests[i])], base=10)
-        expectedx = typeof(G.ec[].a)(tests[i+1][5:length(tests[i+1])])
-        expectedy = typeof(G.ec[].a)(tests[i+2][5:length(tests[i+2])])
+        expectedx = typeof(G.ec.a)(tests[i+1][5:length(tests[i+1])])
+        expectedy = typeof(G.ec.a)(tests[i+2][5:length(tests[i+2])])
 
         if verbose print("G*$k") end
         Gk = G*k

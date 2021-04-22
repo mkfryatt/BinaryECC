@@ -8,7 +8,7 @@ Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
 struct ECPointAffine{B} <: AbstractECPoint{B}
     x::B
     y::B
-    ec::Ref{EC{B}}
+    ec::EC{B}
 end
 
 """
@@ -16,7 +16,7 @@ end
 Convert a hex string to a point on the given elliptic curve
 using the procedure in SEC 2 (version 2), section 2.3.4.
 """
-function ECPointAffine(s::String, ec::Ref{EC{BFieldPoint{D,R,T,L}}})::ECPointAffine{BFieldPoint{D,R,T,L}} where {D,R,T,L}
+function ECPointAffine(s::String, ec::EC{BFieldPoint{D,R,T,L}})::ECPointAffine{BFieldPoint{D,R,T,L}} where {D,R,T,L}
     s = replace(s, " " => "")
 
     #point is id
@@ -72,7 +72,7 @@ function +(p1::ECPointAffine{B}, p2::ECPointAffine{B})::ECPointAffine{B} where B
     #Invs: 1
     x1x2 = p1.x + p2.x
     lambda = (p1.y+p2.y) / x1x2
-    x3 = square(lambda) + lambda + x1x2 + p1.ec[].a
+    x3 = square(lambda) + lambda + x1x2 + p1.ec.a
     y3 = lambda*(p1.x+x3) + x3 + p1.y
     return ECPointAffine(x3, y3, p1.ec)
 end
@@ -99,7 +99,7 @@ function double_standard(p::ECPointAffine{B}) where B
     #Sqrs: 2
     #Invs: 1
     lambda = p.x + (p.y / p.x)
-    x_new = square(lambda) + lambda + p.ec[].a
+    x_new = square(lambda) + lambda + p.ec.a
     y_new = square(p.x) + lambda*x_new + x_new
     return ECPointAffine(x_new, y_new, p.ec)
 end
@@ -109,7 +109,7 @@ function double_threaded(p::ECPointAffine{B}) where B
     if p==-p return zero(ECPointAffine{B}, p.ec) end
 
     lambda = p.x + (p.y / p.x)
-    x_new_task = Threads.@spawn square($lambda) + $lambda + $(p.ec[].a)
+    x_new_task = Threads.@spawn square($lambda) + $lambda + $(p.ec.a)
     y_new = square(p.x)
     x_new::B = fetch(x_new_task)
     y_new += lambda*x_new + x_new
@@ -129,7 +129,7 @@ function mult_mont_affine(p::ECPointAffine{B}, n::I)::ECPointAffine{B} where B w
     if n==0 || iszero(p) return p end
     if n<0 return mont_pow_ladder(-p, -n) end
 
-    b = p.ec[].b
+    b = p.ec.b
     x = p.x
 
     x1 = x
@@ -180,7 +180,7 @@ end
 Returns true if ``p`` is a point on the elliptic curve that it is associated with.
 """
 function isvalid(p::ECPointAffine)::Bool
-    return iszero(p) || (square(p.y) + p.x*p.y == p.x^3 + p.ec[].a*square(p.x) + p.ec[].b)
+    return iszero(p) || (square(p.y) + p.x*p.y == p.x^3 + p.ec.a*square(p.x) + p.ec.b)
 end
 
 """
@@ -195,10 +195,10 @@ end
     zero(::Type{ECPointAffine, ec::EC{B}) where B
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointAffine}, ec::Ref{EC{B}})::ECPointAffine{B} where B
+function zero(::Type{ECPointAffine}, ec::EC{B})::ECPointAffine{B} where B
     return ECPointAffine{B}(B(0), B(0), ec)
 end
 
-function zero(::Type{ECPointAffine{B}}, ec::Ref{EC{B}})::ECPointAffine{B} where B
+function zero(::Type{ECPointAffine{B}}, ec::EC{B})::ECPointAffine{B} where B
     return ECPointAffine{B}(B(0), B(0), ec)
 end

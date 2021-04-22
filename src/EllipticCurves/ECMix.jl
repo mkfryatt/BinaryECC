@@ -108,7 +108,7 @@ function +(::Type{ECPointJacobian{BF}}, p1::ECPointLD{BF}, p2::ECPointJacobian{B
 
     AB = A+B
 
-    x_new = A*AB + p1.ec[].a*square(B) + C^3*p1.z
+    x_new = A*AB + p1.ec.a*square(B) + C^3*p1.z
     x_new *= z1_2
 
     y_new = A*p1.x + C*p1.y*p2.z
@@ -153,7 +153,7 @@ function +(::Type{ECPointLD{BF}}, p1::ECPointLD{BF}, p2::ECPointJacobian{BF}) wh
 
     AB = A+B
 
-    x_new = A*AB + p1.ec[].a*B2 + C^3*p1.z
+    x_new = A*AB + p1.ec.a*B2 + C^3*p1.z
     x_new *= p1.z
 
     y_new = A*p1.x + C*p1.y*p2.z

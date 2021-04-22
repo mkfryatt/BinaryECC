@@ -13,7 +13,7 @@ struct ECPointJacobian{B} <: AbstractECPoint{B}
     x::B
     y::B
     z::B
-    ec::Ref{EC{B}}
+    ec::EC{B}
 end
 
 """
@@ -50,7 +50,7 @@ function +(p1::ECPointJacobian{BF}, p2::ECPointJacobian{BF})::ECPointJacobian{BF
 
     z3 = B * z1_2
 
-    x3 = A*(A+B) + C^3 + p1.ec[].a*square(B)
+    x3 = A*(A+B) + C^3 + p1.ec.a*square(B)
     x3 *= square(z1_2)
 
     z3_2 = square(z3)
@@ -84,7 +84,7 @@ function double(p::ECPointJacobian{BF})::ECPointJacobian{BF} where BF
     z_new = B*z_4
 
     x_new = A*(A+B)
-    x_new += p.ec[].a * square(B)
+    x_new += p.ec.a * square(B)
     x_new *= square(z_4)
 
     y_new = B * square(p.x*z_new)
@@ -111,7 +111,7 @@ function *(p::ECPointJacobian{B}, n::Integer)::ECPointJacobian{B} where B
 end
 
 function isvalid(p::ECPointJacobian)::Bool
-    return iszero(p) || (square(p.y) + p.x*p.y*p.z == p.x^3 + p.ec[].a*square(p.x*p.z) + p.ec[].b*p.z^6)
+    return iszero(p) || (square(p.y) + p.x*p.y*p.z == p.x^3 + p.ec.a*square(p.x*p.z) + p.ec.b*p.z^6)
 end
 
 """
@@ -126,9 +126,9 @@ end
     zero(::Type{ECPointJacobian}, ec::EC{B}) where B
 Returns an object representing the point at infinity on the given curve.
 """
-function zero(::Type{ECPointJacobian}, ec::Ref{EC{B}})::ECPointJacobian{B} where B
+function zero(::Type{ECPointJacobian}, ec::EC{B})::ECPointJacobian{B} where B
     return ECPointJacobian{B}(B(0), B(0), B(0), ec)
 end
-function zero(::Type{ECPointJacobian{B}}, ec::Ref{EC{B}})::ECPointJacobian{B} where B
+function zero(::Type{ECPointJacobian{B}}, ec::EC{B})::ECPointJacobian{B} where B
     return ECPointJacobian{B}(B(0), B(0), B(0), ec)
 end
