@@ -35,6 +35,10 @@ function StaticUInt{L,T}(s::String)::StaticUInt{L,T} where {L,T}
     return StaticUInt{L,T}(value)
 end
 
+function repr(x::StaticUInt{L,T}) where {L,T}
+    return convert(String, x)
+end
+
 #deep copy of a staticuint
 function copy(x::StaticUInt{L,T})::StaticUInt{L,T} where {L,T}
     return StaticUInt{L,T}(copy(x.value))

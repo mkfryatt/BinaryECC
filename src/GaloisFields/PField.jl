@@ -7,6 +7,10 @@ struct PFieldElt
         new(convert(BigInt, value)%p, convert(BigInt, p))
 end
 
+function repr(x::PFieldElt)
+    return repr(x.value)
+end
+
 function ==(x::PFieldElt, y::PFieldElt)
     if x.p!=y.p throw(PFieldEltMismatchException()) end
     return x.value==y.value

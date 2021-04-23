@@ -37,9 +37,12 @@ Several standard curves domain parameters (taken from SEC 2, section 3) are avai
 struct CurveDomainParams{B}
     G::ECPointAffine{B} #generator point
     n::BigInt #order of G, ie nG = O
-    h::BigInt #cofactor
+    h::Int #cofactor
     CurveDomainParams(G::ECPointAffine{B}, n::Integer, h::Integer) where B =
-        new{B}(G, convert(BigInt, n), convert(BigInt, h))
+        new{B}(G, convert(BigInt, n), h)
+
+    CurveDomainParams{B}(G::ECPointAffine{B}, n::Integer, h::Integer) where B =
+        new{B}(G, convert(BigInt, n), h)
 end
 
 #sec1 v2, 3.1.2.2.1

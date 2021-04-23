@@ -294,3 +294,30 @@ function plot_package(package="gf", label="GaloisFields")
         #savefig("benchmarking/$package/$package-$op")
     end
 end
+
+function openssl()
+    x_coords, y_coords, ci = [], Dict(), Dict()
+    open("benchmarking/openssl/openssl.txt", "r") do io
+        x_coords = eval(Meta.parse(readline(io)))
+        y_coords = eval(Meta.parse(readline(io)))
+        ci = eval(Meta.parse(readline(io)))
+    end
+
+    for type in ["becc", "openssl"]
+        y_coords[type] = [t/1000000 for t in y_coords[type]]
+        ci[type] = [t/1000000 for t in ci[type]]
+    end
+
+    p = plot(x_coords, y_coords["becc"], yerror=ci["becc"],
+        size = (300,200),
+        label= "BinaryECC",
+        xlabel=L"\log_2 \textrm{group size}",
+        ylabel=L"\textrm{time} / \textrm{ms}")
+
+    plot!(p, x_coords, y_coords["openssl"], yerror=ci["openssl"],
+        legend= true,
+        label= "OpenSSL")
+
+    savefig("benchmarking/openssl/openssl.tex")
+    savefig("benchmarking/openssl/openssl")
+end

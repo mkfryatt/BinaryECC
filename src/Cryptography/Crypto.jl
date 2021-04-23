@@ -28,6 +28,10 @@ function ==(sig1::ECDSASignature, sig2::ECDSASignature)
     return sig1.r==sig2.r && sig1.s==sig2.s
 end
 
+function repr(key::ECKeyPair{B}) where {B}
+    return "("*repr(key.d)*", "*repr(key.Q)*")"
+end
+
 #sec1 v2, 3.2.1
 #Elliptic Curve Key Pair Generation Primitive
 """

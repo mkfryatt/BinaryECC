@@ -41,6 +41,10 @@ function BFieldElt{D,R,T,L}(s::String) where {D,R,T,L}
     return BFieldElt{D,R,T,L}(value)
 end
 
+function repr(a::BFieldElt{D,R,T,L}) where {D,R,T,L}
+    return repr(a.value)
+end
+
 function copy(x::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return BFieldElt{D,R,T,L}(copy(x.value))
 end
