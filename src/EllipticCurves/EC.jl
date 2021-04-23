@@ -59,11 +59,11 @@ function *(n::Integer, p::AbstractECPoint)
     return p*n
 end
 
-function *(n::PFieldPoint, p::AbstractECPoint)
+function *(n::PFieldElt, p::AbstractECPoint)
     return p*n.value
 end
 
-function *(p::AbstractECPoint, n::PFieldPoint)
+function *(p::AbstractECPoint, n::PFieldElt)
     return p*n.value
 end
 
@@ -166,19 +166,6 @@ function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} wh
     return Q
 end
 
-function mult_threaded(P::AbstractECPoint{BFieldElt{D,R,T,L}}, k::Integer)::AbstractECPoint{BFieldElt{D,R,T,L}} where {D,R,T,L}
-    if k<0 return (-P)*(-k) end
-    if iszero(P) return P end
-
-    len = ceil(Int, D/2)
-    k1 = k & (1<<len -1)
-    k2 = k & (1<<len -1)<<len
-
-    Q1 = Threads.@spawn $P*$k1
-    Q2 = Threads.@spawn $P*$k2
-    return fetch(Q1)+fetch(Q2)
-end
-
 #windowed scalar mult, left to right
 function mult_window(P::AbstractECPoint{B}, k::Integer, w::Int=1)::AbstractECPoint{B} where B
     if w==1 return mult_standard(P, k) end
@@ -219,6 +206,28 @@ function mult_bnaf(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where 
             end
         end
         P = double(P)
+        k >>= 1
+    end
+    return Q
+end
+
+function mult_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+
+    Q::typeof(P) = zero(typeof(P), P.ec)
+    while k>0
+        add = false
+        if k&1==1
+            add = true
+            t = 2 - (k%4)
+            k -= t
+            if t==1 Q_task = Threads.@spawn $Q + $P
+            else Q_task = Threads.@spawn $Q - $P
+            end
+        end
+        P = double(P)
+        if add Q = fetch(Q_task) end
         k >>= 1
     end
     return Q

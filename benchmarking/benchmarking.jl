@@ -7,18 +7,19 @@ function gaussian_ci(sd, n)
 end
 
 #reduction method type for each word size
-function collect_reduce(type="standard")
+function collect_reduce(type="fast")
     x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
-    fields = [B113, B131, B163, B193, B233, B239, B283, B409, B571]
+    fields = [BFieldElt113, BFieldElt131, BFieldElt163, BFieldElt193,
+        BFieldElt233, BFieldElt239, BFieldElt283, BFieldElt409, BFieldElt571]
     sizes = [UInt8,UInt16,UInt32,UInt64,UInt128]
 
     for size in sizes
         println("wordsize: $size")
         y_coords, ci = [], []
         for i in 1:length(fields)
-            field = fields[i](size)
-            println("field: $field")
             L = ceil(Int, 2*x_coords[i]/bitsize(size))
+            field = fields[i]{size, L}
+            println("field: $field")
             x = "@benchmark reduce(\$($field(random(StaticUInt{$L,$size}))))"
             x = Meta.parse(x)
             b = eval(x)
@@ -141,7 +142,7 @@ function collect_threads(w=1)
     end
 
     loc = w==1 ? "threads" : "threads_window"
-    open("benchmarking/$loc/$loc.txt", "w") do io
+    open("benchmarking/threads/$loc.txt", "w") do io
         write(io, "$x_coords\n")
         write(io, "$standard_coords\n")
         write(io, "$standard_ci\n")
