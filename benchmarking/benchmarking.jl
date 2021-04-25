@@ -464,9 +464,9 @@ function collect_openssl()
         append!(ci["openssl"], [gaussian_ci(std(b.times), length(b.times))])
 
         group = groups[i]
-        x = "@benchmark println(repr(generate_keypair($group)))"
-        x = Meta.parse(x)
-        b = eval(x)
+        #x = "@benchmark println(repr(generate_keypair($group)))"
+        #x = Meta.parse(x)
+        b = @benchmark println(repr(generate_keypair($group)))
         append!(y_coords["becc"], [mean(b.times)])
         append!(ci["becc"], [gaussian_ci(std(b.times), length(b.times))])
     end

@@ -41,7 +41,7 @@ Gnerates a new random ECKeyPair associated with T, as described in SEC 1 (versio
 """
 function generate_keypair(T::CurveDomainParams{B}) where B
     d = random(PFieldElt, T.n)
-    Q = T.G*d
+    Q = mult_memo(T.G, d)
     return ECKeyPair{B}(d, Q)
 end
 
@@ -101,6 +101,38 @@ function ecdsa_sign(T::CurveDomainParams{B}, U::ECKeyPair{B}, M::String) where B
 
         #6
         s = (e + r*U.d) / ephemeral.d
+        if iszero(s) continue end
+        break
+    end
+
+    #7
+    return ECDSASignature(r,s)
+end
+
+function ecdsa_sign_deterministic(T::CurveDomainParams{B}, U::ECKeyPair{B}, M::String, k::String) where B
+    #loops until it chooses ephemeral key pair that results in nonzero r,s
+    r, s = zero(PFieldElt,T.n), zero(PFieldElt,T.n)
+    while true
+        #1
+        #ephemeral = generate_keypair(T)
+        k = parse(BigInt, k, base=16)
+        k = PFieldElt(k, T.n)
+        k_point = T.G*k
+
+        #2
+        r = PFieldElt(k_point.x, T.n)
+
+        #3
+        if iszero(r) continue end
+
+        #4
+        H = sha256(M)
+
+        #5
+        e = from_digest(PFieldElt, H, T.n)
+
+        #6
+        s = (e + r*U.d) / k
         if iszero(s) continue end
         break
     end

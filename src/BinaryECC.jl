@@ -27,6 +27,8 @@ include("Cryptography/CurveDomainParams.jl")
 include("Cryptography/Crypto.jl")
 
 export
+    ecdsa_sign_deterministic,
+
     BFieldElt,
     PFieldElt,
     PFieldEltMismatchException,
@@ -66,11 +68,14 @@ export
     double,
     double_threaded,
     double_standard,
-    mult_standard,
+    double_memo,
+    mult_standard_rtl,
+    mult_standard_ltr,
     mult_window,
     mult_threaded,
     mult_threaded_window,
     mult_bnaf,
+    mult_memo,
     mult_bnaf_window,
     mult_wnaf,
     mult_mont_general,

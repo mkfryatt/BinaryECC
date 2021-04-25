@@ -263,7 +263,7 @@ end
 
 function plot_package(package="gf", label="GaloisFields")
 
-    for op in ["mult", "sq", "inv"]
+    for (op, title) in [("mult", "Multiplication"), ("sq", "Squaring"), ("inv", "Inversion")]
         becc_ci, other_ci = [], []
         x_coords = []
         becc_coords, other_coords = [], []
@@ -282,12 +282,13 @@ function plot_package(package="gf", label="GaloisFields")
         r = 1:length(x_coords)
         p = plot(x_coords, becc_coords[r], yerror=becc_ci[r],
             size = (300,200),
+            title = title,
             label= "BinaryECC",
             xlabel=L"\log_2 \textrm{field size}",
             ylabel=L"\textrm{time} / \upmu\textrm{s}")
 
         plot!(p, x_coords, other_coords, yerror=other_ci,
-            legend= true,
+            legend= op=="sq",
             label= label)
 
         savefig("benchmarking/$package/$package-$op.tex")

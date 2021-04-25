@@ -151,7 +151,7 @@ function *(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     return mult_wnaf(P, k, 6)
 end
 
-function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
+function mult_standard_rtl(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 
@@ -161,6 +161,21 @@ function mult_standard(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} wh
             Q += P
         end
         P = double(P)
+        k >>= 1
+    end
+    return Q
+end
+
+function mult_standard_ltr(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+
+    Q = zero(typeof(P), P.ec)
+    while k>0
+        Q = double(Q)
+        if k&1==1
+            Q += P
+        end
         k >>= 1
     end
     return Q
@@ -209,6 +224,31 @@ function mult_bnaf(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where 
         k >>= 1
     end
     return Q
+end
+
+function mult_memo(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
+    if k<0 return (-P)*(-k) end
+    if iszero(P) return P end
+
+    Q = zero(typeof(P), P.ec)
+    while k>0
+        if k&1==1
+            t = 2 - (k%4)
+            k -= t
+            if t==1 Q+=P
+            else Q-=P
+            end
+        end
+        P = double_memo(P)
+        k >>= 1
+    end
+    return Q
+end
+function mult_memo(P::AbstractECPoint{B}, k::PFieldElt)::AbstractECPoint{B} where B
+    return mult_memo(P, k.value)
+end
+function mult_memo(k, P::AbstractECPoint{B})::AbstractECPoint{B} where B
+    return mult_memo(P, k)
 end
 
 function mult_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
@@ -276,7 +316,7 @@ end
 #precompute array of scalar mults of P
 function precompute(P::AbstractECPoint{B}, n::Int, step::Int) where B
     precomp::Array{typeof(P),1} = []
-    Pn = mult_standard(P, step)
+    Pn = mult_standard_rtl(P, step)
     append!(precomp, [P])
     for i in 2:n
         append!(precomp, [precomp[i-1]+Pn])

@@ -22,6 +22,61 @@ function testcurve(curve, verbose=true)
     return true
 end
 
+function testecdsa(verbose=true)
+    #https://www.ietf.org/rfc/rfc6979.txt
+    if verbose println("Testing ECDSA") end
+    tests = readlines("./test/ecdsa.txt")
+    tests = [split(t, " = ")[2] for t in tests]
+
+    i = 1
+    while i<length(tests)
+        if verbose println("Curve: $(tests[i])") end
+
+        T = eval(Meta.parse(tests[i]))(UInt)
+        privkey = parse(BigInt, tests[i+1], base=16)
+        U = ECKeyPair(PFieldElt(privkey, T.n), T.G*privkey)
+
+        Ux = convert(BigInt, U.Q.x)
+        Uy = convert(BigInt, U.Q.y)
+        if parse(BigInt, tests[i+2], base=16) != Ux ||
+            parse(BigInt, tests[i+3], base=16) != Uy
+            if verbose println("Failed to compute public key") end
+            return false
+        end
+
+        i += 4
+        for j in 1:2
+            msg = string(tests[i])
+            k = string(tests[i+1])
+            sig = ecdsa_sign_deterministic(T, U, msg, k)
+            r = parse(BigInt, tests[i+2], base=16)
+            s = parse(BigInt, tests[i+3], base=16)
+            if r!=sig.r.value || s!=sig.s.value
+                if verbose println("Failed to compute signature") end
+                return false
+            end
+            i += 4
+        end
+    end
+    return true
+end
+
+@testset "ECDSA testvectors" begin
+    @test testecdsa(false)
+    msg1 = "message 1"
+    msg2 = "message 2"
+    sect163k1 = SECT163K1(UInt)
+    ukey = generate_keypair(sect163k1)
+    vkey = generate_keypair(sect163k1)
+    @test ukey != vkey
+    sig1_real = ecdsa_sign(sect163k1, ukey, msg1)
+    sig1_fake = ecdsa_sign(sect163k1, vkey, msg1)
+    @test sig1_real!=sig1_fake
+    @test ecdsa_verify(sect163k1, ukey.Q, sig1_real, msg1)
+    @test !ecdsa_verify(sect163k1, ukey.Q, sig1_fake, msg1)
+    @test !ecdsa_verify(sect163k1, ukey.Q, sig1_fake, msg2)
+end
+
 @testset "Binary Field" begin
     f = B163(UInt)
     x = random(f)
@@ -37,8 +92,8 @@ end
 
 @testset "Prime Field" begin
     sect163k1 = SECT163K1(UInt)
-    x = random(PFieldPoint, sect163k1.n)
-    y = random(PFieldPoint, sect163k1.n)
+    x = random(PFieldElt, sect163k1.n)
+    y = random(PFieldElt, sect163k1.n)
     @test x*y == y*x #test commutativity for mult
     @test x+y == y+x #test commutativity for add
     @test x^5 == x*x*x*x*x #test exponentiation for an odd power
@@ -82,21 +137,6 @@ end
     @test G == G_LD #test the conversion worked
     @test G_LD*2 == G*2 #test doubling
     @test G_LD*3 == G*3 #test addition
-end
-
-@testset "ECDSA" begin
-    msg1 = "message 1"
-    msg2 = "message 2"
-    sect163k1 = SECT163K1(UInt)
-    ukey = generate_keypair(sect163k1)
-    vkey = generate_keypair(sect163k1)
-    @test ukey != vkey
-    sig1_real = ecdsa_sign(sect163k1, ukey, msg1)
-    sig1_fake = ecdsa_sign(sect163k1, vkey, msg1)
-    @test sig1_real!=sig1_fake
-    @test ecdsa_verify(sect163k1, ukey.Q, sig1_real, msg1)
-    @test !ecdsa_verify(sect163k1, ukey.Q, sig1_fake, msg1)
-    @test !ecdsa_verify(sect163k1, ukey.Q, sig1_fake, msg2)
 end
 
 @testset "ECDH" begin

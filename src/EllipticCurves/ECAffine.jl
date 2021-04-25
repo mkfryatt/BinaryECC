@@ -86,11 +86,23 @@ function -(p::ECPointAffine{B})::ECPointAffine{B} where B
     return ECPointAffine(p.x, p.x+p.y, p.ec)
 end
 
-function double(p::ECPointAffine{B}) where B
+double_dict = Dict()
+
+function double(p::ECPointAffine{B})::ECPointAffine{B} where B
     return double_standard(p)
 end
 
-function double_standard(p::ECPointAffine{B}) where B
+function double_memo(p::ECPointAffine{B})::ECPointAffine{B} where B
+    if p in keys(double_dict)
+        return double_dict[p]
+    else
+        p2 = double_standard(p)
+        push!(double_dict, p=>p2)
+        return p2
+    end
+end
+
+function double_standard(p::ECPointAffine{B})::ECPointAffine{B} where B
     if iszero(p) return p end
     if p==-p return zero(ECPointAffine{B}, p.ec) end
 
@@ -104,7 +116,7 @@ function double_standard(p::ECPointAffine{B}) where B
     return ECPointAffine(x_new, y_new, p.ec)
 end
 
-function double_threaded(p::ECPointAffine{B}) where B
+function double_threaded(p::ECPointAffine{B})::ECPointAffine{B} where B
     if iszero(p) return p end
     if p==-p return zero(ECPointAffine{B}, p.ec) end
 
