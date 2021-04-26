@@ -82,6 +82,10 @@ function ==(p1::ECPointJacobian{B}, p2::ECPointLD{B}) where B
     return p2==p1
 end
 
+function +(p1::AbstractECPoint{B}, p2::AbstractECPoint{B})::ECPointAffine{B} where B
+    return convert(ECPointAffine, p1) + convert(ECPointAffine, p2)
+end    
+
 """
     +(::Type{ECPointJacobian{B}}, p1::ECPointLD{B}, p2::ECPointJacobian{B}) where B
 Returns ``p_1 +p_2`` in Jacobian coordinates.

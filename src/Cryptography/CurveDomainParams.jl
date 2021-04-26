@@ -107,6 +107,10 @@ function isvalid(T::CurveDomainParams{B}, t::Int) where B
     return true
 end
 
+function random(T::CurveDomainParams{B})::ECPointAffine{B} where {B}
+    return mult_memo(T.G, rand(1:T.n))
+end
+
 #sec2 v2 curve parameters:
 SECT163K1(T::Type{U}) where U<:Unsigned = CurveDomainParams(
     ECPointAffine(

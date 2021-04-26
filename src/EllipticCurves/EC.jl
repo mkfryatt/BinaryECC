@@ -55,16 +55,17 @@ function -(p1::AbstractECPoint{B}, p2::AbstractECPoint{B}) where B
     return p1 + (-p2)
 end
 
-function *(n::Integer, p::AbstractECPoint)
+function *(n, p::AbstractECPoint{B}) where {B}
     return p*n
 end
-
-function *(n::PFieldElt, p::AbstractECPoint)
+function *(p::AbstractECPoint{B}, n::PFieldElt) where {B}
     return p*n.value
 end
-
-function *(p::AbstractECPoint, n::PFieldElt)
-    return p*n.value
+function ⋅(P::AbstractECPoint{B}, k)::AbstractECPoint{B} where B
+    return *(P, k)
+end
+function ⋅(k, P::AbstractECPoint{B})::AbstractECPoint{B} where B
+    return *(P, k)
 end
 
 """
@@ -171,12 +172,11 @@ function mult_standard_ltr(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B
     if iszero(P) return P end
 
     Q = zero(typeof(P), P.ec)
-    while k>0
+    for i in bits(k):-1:0
         Q = double(Q)
-        if k&1==1
+        if (k>>i)&1==1
             Q += P
         end
-        k >>= 1
     end
     return Q
 end
@@ -251,7 +251,7 @@ function mult_memo(k, P::AbstractECPoint{B})::AbstractECPoint{B} where B
     return mult_memo(P, k)
 end
 
-function mult_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
+function mult_bnaf_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
 
