@@ -201,6 +201,23 @@ function best_scalarmult(w1=4, w2=8, w3=6)
     savefig("benchmarking/scalar_mult/scalar_mult")
 end
 
+function plot_memo()
+    (x_coords, wnaf_y, wnaf_ci) = windowsize_scalarmult_dicts("mult_wnaf", [1,2,3,4,5,6,7,8])
+    (x_coords, memo_y, memo_ci) = windowsize_scalarmult_dicts("mult_memo", [1])
+
+    p = plot(x_coords, memo_y[1], yerror=memo_ci[1],
+    size = (300,200),
+    legend=true,
+    label="Memoised multiplication",
+    xlabel=L"\log_2 \textrm{group size}",
+    ylabel=L"\textrm{time} / \textrm{ms}")
+
+    plot!(x_coords, wnaf_y[6], yerror=wnaf_ci[6], label="Standard multiplication")
+
+    savefig("benchmarking/mult_memo/mult_memo.tex")
+    savefig("benchmarking/mult_memo/mult_memo")
+end
+
 function double_threads()
     threads_ci, standard_ci = [], []
     x_coords = []
@@ -261,7 +278,7 @@ function mult_mont()
     savefig("benchmarking/mult_mont/mult_mont")
 end
 
-function plot_package(package="gf", label="GaloisFields")
+function plot_packages()
 
     for (op, title) in [("mult", "Multiplication"), ("sq", "Squaring"), ("inv", "Inversion")]
         becc_ci, other_ci = [], []
@@ -273,7 +290,7 @@ function plot_package(package="gf", label="GaloisFields")
             becc_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
             becc_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         end
-        open("benchmarking/$package/$package-$op.txt", "r") do io
+        open("benchmarking/nemo/nemo-$op.txt", "r") do io
             x_coords = eval(Meta.parse(readline(io)))
             other_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
             other_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
@@ -289,9 +306,19 @@ function plot_package(package="gf", label="GaloisFields")
 
         plot!(p, x_coords, other_coords, yerror=other_ci,
             legend= op=="sq",
-            label= label)
+            label= "Nemo")
 
-        savefig("benchmarking/$package/$package-$op.tex")
+        open("benchmarking/gf/gf-$op.txt", "r") do io
+            x_coords = eval(Meta.parse(readline(io)))
+            other_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            other_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        end
+
+        plot!(p, x_coords, other_coords, yerror=other_ci,
+            legend= op=="sq",
+            label= "GaloisFields")
+
+        savefig("benchmarking/bfield/bfield-$op.tex")
         #savefig("benchmarking/$package/$package-$op")
     end
 end
@@ -311,9 +338,22 @@ function openssl()
 
     p = plot(x_coords, y_coords["becc"], yerror=ci["becc"],
         size = (300,200),
-        label= "BinaryECC",
+        label= "BinaryECC - fast",
         xlabel=L"\log_2 \textrm{group size}",
         ylabel=L"\textrm{time} / \textrm{ms}")
+
+    threads_coords, threads_ci = [], []
+    open("benchmarking/mult_mont/mult_mont.txt", "r") do io
+        x_coords = eval(Meta.parse(readline(io)))
+        standard_coords = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+        standard_ci = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+        threads_coords = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+        threads_ci = [x/1000000 for x in eval(Meta.parse(readline(io)))]
+    end
+
+    plot!(p, x_coords,threads_coords, yerror=threads_ci,
+        legend= true,
+        label= "BinaryECC - Montgomery")
 
     plot!(p, x_coords, y_coords["openssl"], yerror=ci["openssl"],
         legend= true,

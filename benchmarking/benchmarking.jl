@@ -334,6 +334,28 @@ function collect_montmult()
     end
 end
 
+function collect_memo()
+    groups = [SECT163K1, SECT233K1, SECT283K1, SECT409K1, SECT571K1]
+    groups = [group(UInt64) for group in groups]
+    x_coords = [log(2, group.n) for group in groups]
+
+    standard_coords, threaded_coords, standard_ci, threaded_ci = [],[],[],[]
+    for group in groups
+        println("group: $group\n")
+        G = group.G
+        n = group.n
+        b = @benchmark mult_memo($G, $(rand(1:n)) )
+        append!(standard_coords, [mean(b.times)])
+        append!(standard_ci, [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    open("benchmarking/mult_memo/mult_memo.txt", "w") do io
+        write(io, "$x_coords\n")
+        write(io, "$standard_coords\n")
+        write(io, "$standard_ci\n")
+    end
+end
+
 function collect_becc()
     x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
     fields = [B113, B131, B163, B193, B233, B239, B283, B409, B571]
@@ -350,7 +372,7 @@ function collect_becc()
         append!(y_coords["mult"], [mean(b.times)])
         append!(ci["mult"], [gaussian_ci(std(b.times), length(b.times))])
 
-        x = "@benchmark (\$(random($field)))^2"
+        x = "@benchmark square(\$(random($field)))"
         x = Meta.parse(x)
         b = eval(x)
         append!(y_coords["sq"], [mean(b.times)])

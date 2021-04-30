@@ -1,5 +1,7 @@
 using Test
 
+#155 tests
+
 for size in [UInt8, UInt16, UInt32, UInt64, UInt128]
     @testset "Wordsize $size" begin
         f = B163(size)
@@ -61,5 +63,3 @@ end
         @test x2 == square_window(x, w)
     end
 end
-
-#test each function

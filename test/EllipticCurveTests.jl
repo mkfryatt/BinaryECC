@@ -1,5 +1,7 @@
 using Test
 
+#89 tests
+
 function testcurve(curve, verbose=true)
     if verbose println("Testing $curve:") end
     tests = readlines("./test/$curve.txt")

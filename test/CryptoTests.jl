@@ -1,5 +1,7 @@
 using Test
 
+#107 tests
+
 function testecdsa(verbose=true)
     #https://www.ietf.org/rfc/rfc6979.txt
     if verbose println("Testing ECDSA") end
@@ -73,10 +75,7 @@ for curve in [SECT163K1, SECT163R1, SECT163R2, SECT233K1, SECT233R1, SECT283K1,
         @test !ecdsa_verify(T, ukey.Q, sig1_fake, msg1)
         @test !ecdsa_verify(T, ukey.Q, sig1_fake, msg2)
     end
-end
 
-for curve in [SECT163K1, SECT163R1, SECT163R2, SECT233K1, SECT233R1, SECT283K1,
-    SECT283R1, SECT409K1, SECT409R1, SECT571K1, SECT571R1]
     @testset "ECDH General: curve $curve" begin
         T = curve(UInt)
         u1 = ecdh_deployment1(T)
