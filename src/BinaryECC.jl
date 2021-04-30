@@ -60,6 +60,7 @@ export
     zero,
     one,
     reduce,
+    fastreduce,
     random,
     bitsize,
 
@@ -84,6 +85,7 @@ export
     mult_shiftandadd,
     mult_shiftandadd_window,
     mult_threaded,
+    mult_threaded_window,
     mult_ownreduce,
     mult_comb_rtl,
     mult_comb_ltr,

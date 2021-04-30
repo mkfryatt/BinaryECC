@@ -1,7 +1,7 @@
 """
     ECPointLD{B} <: AbstractECPoint{B}
-Represents a point on an elliptic curve over the field represented by D and R.
-Contains fields ``x``, ``y``, ``z``, and the elliptic field ("ec") that it is on.
+Represents a point on an elliptic curve over the binary `B`.
+Contains fields `x::B`, `y::B`, `z::B` and `ec::EC{B}`.
 
 ``E: y^2 +  xyz = x^3z + ax^2z^2 + bz^4``
 
@@ -122,6 +122,11 @@ Returns an object representing the point at infinity on the given curve.
 function zero(::Type{ECPointLD}, ec::EC{B})::ECPointLD{B} where B
     return ECPointLD{B}(B(0), B(0), B(0), ec)
 end
+
+"""
+    zero(::Type{ECPointLD{B}}, ec::EC{B}) where B
+Returns an object representing the point at infinity on the given curve.
+"""
 function zero(::Type{ECPointLD{B}}, ec::EC{B})::ECPointLD{B} where B
     return ECPointLD{B}(B(0), B(0), B(0), ec)
 end

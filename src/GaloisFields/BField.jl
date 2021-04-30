@@ -2,24 +2,34 @@
 #R is the reduction polynomial without the x^D term
 """
     BFieldElt{D,R,T,L}
-Represents a point in the binary field which has order ``2^D`` and reduction polynomial
+Represents an element in the binary field which has order ``2^D`` and reduction polynomial
 
 ``x^D + x^{r_n} + \\cdots + x^{r_0}``
 
 where ``R = r_n r_{n-1}\\ldots r_1 r_0`` in binary. The polynomial is stored
-with an array of T words.
+with a length `L` array of type `T<:Unsigned` words, using a `StaticUInt{L,T}` object (a wrapper
+for the type `MVector{L,T}` from StaticArrays).
+
+Note: binary field arithmetic has been tested with words of type `UInt8`, `UInt16`,
+`UInt32`, `UInt64` and `UInt128`. For any other possible word types, it is advisable to perform
+additional testing.
 
 Types for points in the standard fields (taken from SEC 2, table 3)
  are available:
-- BFieldElt113
-- BFieldElt131
-- BFieldElt163
-- BFieldElt193
-- BFieldElt233
-- BFieldElt239
-- BFieldElt283
-- BFieldElt409
-- BFieldElt571
+- `BFieldElt113{T,L}`
+- `BFieldElt131{T,L}`
+- `BFieldElt163{T,L}`
+- `BFieldElt193{T,L}`
+- `BFieldElt233{T,L}`
+- `BFieldElt239{T,L}`
+- `BFieldElt283{T,L}`
+- `BFieldElt409{T,L}`
+- `BFieldElt571{T,L}`
+
+Each of these fields can be easily created by the functions `B113(T)`, `B131(T)`, etc.,
+which take a word type `T` and they return a binary field element type with the smallest
+value of `L`. The function `B(D, R, T)` returns similar types, but for custom fields
+defined for `D` and `R`.
 """
 struct BFieldElt{D,R,T,L}
     value::StaticUInt{L,T}
@@ -51,7 +61,7 @@ end
 
 """
     ==(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns true if the points ``a`` and ``b`` from the same field are equal,
+Returns true if `a` and `b` represent the same field element,
  and false otherwise.
 """
 function ==(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::Bool where {D,R,T,L}
@@ -60,7 +70,7 @@ end
 
 """
     +(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns a new element (of the binary field represented by {D,R}) which is the result of ``a+b``.
+Returns a new element which is the result of ``a+b``.
 """
 function +(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return BFieldElt{D,R,T,L}(a.value ⊻ b.value)
@@ -68,7 +78,7 @@ end
 
 """
     -(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns a new element (of the binary field represented by {D,R}) which is the result of ``a-b``.
+Returns a new element which is the result of ``a-b``.
 """
 function -(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return a+b
@@ -82,7 +92,8 @@ end
 #available for each of the standard fields (in Field_fastreduce.jl)
 """
     reduce(a::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns the least element ``b``, such that ``a \\equiv b \\pmod{R}``.
+Returns the least element `b`, such that ``a \\equiv b`` in the field represented
+by `D` and `R`.
 """
 function reduce(a::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,ceil(Int,D/bitsize(T))} where {D,R,T,L}
     #b will should always be such that a ≡ b (mod R)
@@ -105,8 +116,8 @@ end
 
 """
     *(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns a new element (of the binary field represented by {D,R}) which is the
- result of ``a \\cdot b``.
+Returns a new element which is the result of ``a \\cdot b``. This is the default
+multiplication routine for binary field arithmetic, chosen to have high performance.
 """
 function *(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return mult_shiftandadd_window(a, b, 4)
@@ -114,7 +125,7 @@ end
 
 """
     mult_shiftandadd(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns ``a \\cdot b`` using the right to left shift and add method.
+Binary field multiplication using a right-to-left shift-and-add method.
 """
 function mult_shiftandadd(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     longL = ceil(Int,2*D/bitsize(T))
@@ -129,6 +140,11 @@ function mult_shiftandadd(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldE
     return reduce(BFieldElt{D,R,T,longL}(c))
 end
 
+"""
+    mult_shiftandadd_window(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}, window::Int) where {D,R,T,L}
+Binary field multiplication using a right-to-left shift-and-add method with a window
+size of `window`. The optimal window size for this routine is 4.
+"""
 function mult_shiftandadd_window(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}, window::Int)::BFieldElt{D,R,T,L} where {D,R,T,L}
     Bu = [small_mult(b, u) for u::UInt8=UInt8(1):(UInt8(1)<<window -UInt8(1))]
     longL = ceil(Int,2*D/bitsize(T))
@@ -144,14 +160,16 @@ end
 
 """
     mult_threaded(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns ``a \\cdot b`` using the right to left shift and add method with multithreading.
+Binary field multiplication using a right-to-left shift-and-add method, by spawning
+an additional thread.
 """
 function mult_threaded(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     mid = (length(a.value) ÷ 2)*64 -1
     c1 = Threads.@spawn mult_threaded_helper($a, $b, 0, $mid)
-    c2 = Threads.@spawn mult_threaded_helper($a, $b, $mid+1, $D-1)
+    c2 = mult_threaded_helper(a, b, mid+1, D-1)
     longL = ceil(Int,2*D/bitsize(T))
-    return reduce(BFieldElt{D,R,T,longL}(fetch(c1) ⊻ fetch(c2)))
+    xor!(c2, fetch(c1))
+    return reduce(BFieldElt{D,R,T,longL}(c2))
 end
 function mult_threaded_helper(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L},
     start::Int, stop::Int)::StaticUInt{ceil(Int,2*D/bitsize(T)),T} where {D,R,T,L}
@@ -167,6 +185,11 @@ function mult_threaded_helper(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L},
     return c
 end
 
+"""
+    mult_threaded_window(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}, w::Int) where {D,R,T,L}
+Binary field multiplication using a windowed right-to-left shift-and-add method, by spawning
+an additional thread.
+"""
 function mult_threaded_window(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}, w::Int)::BFieldElt{D,R,T,L} where {D,R,T,L}
     mid = (length(a.value) ÷ 2)*64 -1
     c1 = Threads.@spawn mult_window_helper($a, $b, $w, 0, $mid)
@@ -195,8 +218,8 @@ end
 
 """
     mult_ownreduce(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns ``a \\cdot b`` using the right to left shift and add method,
-without needing to call a reduction function.
+Binary field multiplication using a windowed right-to-left shift-and-add method,
+in which reduction is performed alongside multiplication.
 """
 function mult_ownreduce(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     shiftedb::StaticUInt{L,T} = copy(b.value)
@@ -219,8 +242,7 @@ end
 
 """
     mult_comb_rtl(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns ``a \\cdot b`` using a right to left comb method
-(described in Guide to Elliptic Curve Cryptography, algorithm 2.34).
+Binary field multiplication using a right-to-left comb method.
 """
 function mult_comb_rtl(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     c = zero(StaticUInt{2*L,T})
@@ -240,8 +262,7 @@ end
 
 """
     mult_comb_ltr(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns ``a \\cdot b`` using a left to right comb method
-(described in Guide to Elliptic Curve Cryptography, algorithm 2.35).
+Binary field multiplication using a left-to-right comb method.
 """
 function mult_comb_ltr(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     c = zero(StaticUInt{2*L,T})
@@ -260,9 +281,7 @@ end
 
 """
     mult_comb_window(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}, window::Int) where {D,R,T,L}
-Returns ``a \\cdot b`` using a left to right comb method windowing
-(described in Guide to Elliptic Curve Cryptography, algorithm 2.36).
-
+Binary field multiplication using a windowed left-to-right comb method.
 Performs best with a window size of 4.
 """
 function mult_comb_window(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}, window::Int)::BFieldElt{D,R,T,L} where {D,R,T,L}
@@ -308,14 +327,18 @@ end
 
 """
     square(a::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns a new element (of the binary field represented by {D,R}) which is the
-result of ``a^2``.
+Returns a new element which is the result of ``a^2``, using the default routine for
+high performance.
 """
 function square(a::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return square_window(a, 4)
 end
 
 #adds a zero between every digit of the original
+"""
+    square_standard(a::BFieldElt{D,R,T,L}) where {D,R,T,L}
+Binary field squaring performed by shifting each bit ``b_i`` left by ``i``.
+"""
 function square_standard(a::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     longL = ceil(Int,2*D/bitsize(T))
     b = zero(StaticUInt{longL,T})
@@ -330,8 +353,8 @@ end
 
 """
     square_window(a::BFieldElt{D,R,T,L}, window::Int) where {D,R,T,L}
-Returns ``a^2`` by inserting a zero between every bit in the original, using
-the specified window size.
+Binary field squaring performed with a windowed method, in which the square of each
+size `window` block is calculated upfront. Performs best with a window size of 4.
 """
 function square_window(a::BFieldElt{D,R,T,L}, window::Int)::BFieldElt{D,R,T,L} where {D,R,T,L}
     longL = ceil(Int,2*D/bitsize(T))
@@ -361,8 +384,8 @@ end
 #Algorithm 2.48, Guide to Elliptic Curve Cryptography
 """
     inv(a::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns a new element ``b`` such that ``a b ≡ 1 \\pmod{f_R(x)}``
- (where ``f_R(x)`` is the reduction polynomial for the field).
+Returns a new element `b` such that ``a b ≡ 1`` in the field represented by `D`
+and `R`.
 """
 function inv(a::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     if iszero(a.value) throw(DivideError()) end
@@ -388,8 +411,7 @@ end
 
 """
     /(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns a new element (of the binary field represented by {D,R}) which is the
-result of ``\\frac{a}{b}``.
+Returns a new element which is the result of ``\\frac{a}{b}``.
 """
 function /(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return a * inv(b)
@@ -415,8 +437,8 @@ end
 #right to left, square and multiply method
 """
     ^(a::BFieldElt{D,R,T,L}, b::Integer) where {D,R,T,L}
-Returns a new element (of the binary field represented by {D,R}) which is the
-result of ``a^b``.
+Returns a new element which is the result of ``a^b``. If squaring is required, i.e.
+`b==2`, it is faster to call `square(a)` directly.
 """
 function ^(a::BFieldElt{D,R,T,L}, b::Integer)::BFieldElt{D,R,T,L} where {D,R,T,L}
     c = one(BFieldElt{D,R,T,L})
@@ -443,7 +465,7 @@ end
 
 """
     iszero(a::BFieldElt)
-Returns true if ``a`` is the zero element of the field represented by D and R,
+Returns true if ``a`` is the zero element of the binary field represented by `D` and `R`,
  and false otherwise.
 """
 function iszero(a::BFieldElt)::Bool
@@ -452,7 +474,7 @@ end
 
 """
     zero(::Type{BFieldElt{D,R,T,L}}) where {D,R,T,L}
-Returns the zero element of the specified field.
+Returns the zero element (additive identity) of the specified field.
 """
 function zero(::Type{BFieldElt{D,R,T,L}})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return BFieldElt{D,R,T,L}(zero(StaticUInt{L,T}))
@@ -460,7 +482,7 @@ end
 
 """
     isone(a::BFieldElt)
-Returns true if ``a`` is equal to one, and false otherwise.
+Returns true if ``a`` is equal to one (multiplicative identity), and false otherwise.
 """
 function isone(a::BFieldElt)::Bool
     return isone(a.value)
@@ -468,7 +490,7 @@ end
 
 """
     one(::Type{BFieldElt{D,R,T,L}}) where {D,R,T,L}
-Returns element 1 of the specified field.
+Returns element one (multiplicative identity) of the specified field.
 """
 function one(::Type{BFieldElt{D,R,T,L}})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return BFieldElt{D,R,T,L}(one(StaticUInt{L,T}))
@@ -476,7 +498,7 @@ end
 
 """
     sqrt(a::BFieldElt{D,R,T,L}) where {D,R,T,L}
-Returns ``b`` such that ``b^2 ≡ a \\pmod(R)``.
+Returns `b` such that ``b^2 \\equiv a``.
 """
 function sqrt(a::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     #a^{2^{D-1}}
@@ -488,7 +510,7 @@ end
 
 """
     convert(::Type{BigInt}, a::BFieldElt)
-Converts the given field point to a number (of type BigInt), following the procedure
+Converts the given field point to a number (of type `BigInt`), following the procedure
  set out in SEC 1 (version 2) 2.3.9.
 """
 function convert(::Type{BigInt}, a::BFieldElt)::BigInt

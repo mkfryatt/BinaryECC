@@ -1,7 +1,7 @@
 """
     ECPointAffine{B} <: AbstractECPoint{B}
-Represents a point on an elliptic curve over the field represented by D and R.
-Contains fields ``x``, ``y``, and the elliptic field ("ec") that it is on.
+Represents a point on an elliptic curve over the binary `B`.
+Contains fields `x::B`, `y::B`, and `ec::EC{B}`.
 
 ``E: y^2 +  xy = x^3 + ax^2 + b``
 """
@@ -38,7 +38,7 @@ end
 
 """
     repr(p::ECPointAffine)
-Returns a string representation of an elliptic curve point, "``(x, y)``".
+Returns a string representation of an elliptic curve point, i.e. "``(x, y)``".
 """
 function repr(p::ECPointAffine)::String
     return "("*repr(p.x)*", "*repr(p.y)*")"
@@ -88,10 +88,22 @@ end
 
 double_dict = Dict()
 
+"""
+    double(p::ECPointAffine{B})::ECPointAffine{B} where B
+Returns the result of doubling the point `p`, using a standard method that assumes
+`p` is a random unknown point.
+"""
 function double(p::ECPointAffine{B})::ECPointAffine{B} where B
     return double_standard(p)
 end
 
+"""
+    double_memo(p::ECPointAffine{B})::ECPointAffine{B} where B
+Performs memoised point doubling: if the point `p` has previously been calculated
+by this routine, it will be fetched from a dictionary rather than recalculated. If
+the point has not yet been seen, it will be doubled with the `double_standard` routine
+and stored into a dictionary.
+"""
 function double_memo(p::ECPointAffine{B})::ECPointAffine{B} where B
     if p in keys(double_dict)
         return double_dict[p]
@@ -102,6 +114,10 @@ function double_memo(p::ECPointAffine{B})::ECPointAffine{B} where B
     end
 end
 
+"""
+    double_standard(p::ECPointAffine{B})::ECPointAffine{B} where B
+Performs a standard version of the point doubling routine.
+"""
 function double_standard(p::ECPointAffine{B})::ECPointAffine{B} where B
     if iszero(p) return p end
     if p==-p return zero(ECPointAffine{B}, p.ec) end
@@ -116,6 +132,10 @@ function double_standard(p::ECPointAffine{B})::ECPointAffine{B} where B
     return ECPointAffine(x_new, y_new, p.ec)
 end
 
+"""
+    double_threaded(p::ECPointAffine{B})::ECPointAffine{B} where B
+Doubles the point `p` by spawning an additional thread to perform extra work on.
+"""
 function double_threaded(p::ECPointAffine{B})::ECPointAffine{B} where B
     if iszero(p) return p end
     if p==-p return zero(ECPointAffine{B}, p.ec) end
@@ -189,7 +209,7 @@ end
 
 """
     isvalid(p::ECPointAffine)
-Returns true if ``p`` is a point on the elliptic curve that it is associated with.
+Returns true if `p` is a point on the elliptic curve that it is associated with.
 """
 function isvalid(p::ECPointAffine)::Bool
     return iszero(p) || (square(p.y) + p.x*p.y == p.x^3 + p.ec.a*square(p.x) + p.ec.b)
@@ -211,6 +231,10 @@ function zero(::Type{ECPointAffine}, ec::EC{B})::ECPointAffine{B} where B
     return ECPointAffine{B}(B(0), B(0), ec)
 end
 
+"""
+    zero(::Type{ECPointAffine{B}, ec::EC{B}) where B
+Returns an object representing the point at infinity on the given curve.
+"""
 function zero(::Type{ECPointAffine{B}}, ec::EC{B})::ECPointAffine{B} where B
     return ECPointAffine{B}(B(0), B(0), ec)
 end

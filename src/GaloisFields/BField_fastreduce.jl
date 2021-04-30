@@ -1,3 +1,9 @@
+"""
+    @fastreduce(D,R)
+A macro to produce a specialised reduction function for the binary field denoted by
+``D`` and ``R``. It is strongly recommended this is run for any new user-defined fields,
+as it achieves signficantly higher performance than the generic reduction routine.
+"""
 macro fastreduce(D,R)
     D_val = eval(D)
     R_val = eval(R)

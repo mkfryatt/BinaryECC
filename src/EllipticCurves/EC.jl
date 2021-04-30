@@ -8,16 +8,15 @@ struct ECMismatchException <: Exception end
 
 """
     AbstractECPoint{B}
-Abstract type for points on an elliptic curve.
+Abstract type for points on an elliptic curve defined over the binary field `B`.
 """
 abstract type AbstractECPoint{B} end
 
 """
     EC{B}
-Represents a non-supersingular elliptic curve over the
-field given by D and R.
+Represents a non-supersingular elliptic curve over the binary field `B`.
 
-Contains fields ``a`` and ``b``, where:
+Contains fields `a::B` and `b::B`, where:
 
 ``y^2 + xy = x^3 + ax^2 + b``
 """
@@ -37,14 +36,11 @@ end
 
 """
     ==(ec1::EC{B}, ec2::EC{B}) where B
-Two elliptic curves are equal if they have the
-same ``a`` and ``b`` values, and defined over the same field.
+Two elliptic curves are equal if they have the same parameters `a` and `b`, and
+are defined over the same field.
 """
 function ==(ec1::EC{B}, ec2::EC{B}) where B
     return ec1.a==ec2.a && ec1.b==ec2.b
-end
-function ==(ec1::Ref{EC{B}}, ec2::Ref{EC{B}}) where B
-    return ec1[] === ec2[]
 end
 
 """
@@ -105,6 +101,10 @@ end
 
 #Guide to ECC, algorithm 3.30
 #computes the non adjacent form of a positive integer
+"""
+    naf(k::T) where T<:Integer
+Computes the binary NAF of an integer `k`.
+"""
 function naf(k::T) where T<:Integer
     i = 0
     adds = T(0)
@@ -126,6 +126,10 @@ end
 
 #Guide to ECC, algorithm 3.35
 #Computing the width-w NAF of a positive integer
+"""
+    naf(k::Integer, w::Int)
+Computes the width-`w` NAF of integer `k`.
+"""
 function naf(k::Integer, w::Int)
     if k<=0 throw(ArgumentError("Expected a positive value.")) end
     i = 1
@@ -145,13 +149,20 @@ function naf(k::Integer, w::Int)
 end
 
 """
-    *(p::AbstractECPoint{B}, n::Integer) where B
-Returns the result of the scalar multiplication ``p \\cdot n``, using a double and add method.
+    *(p::AbstractECPoint{B}, k) where B
+Returns the result of the scalar multiplication ``p \\cdot k``, using a default
+high performance method. Commutative, so that either `p * k` or `k * p` can be
+written, in addition to `p \\cdot k` or `k \\cdot p`. `k` must be an integer or
+a `PFieldElt`.
 """
 function *(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     return mult_wnaf(P, k, 6)
 end
 
+"""
+    mult_standard_rtl(P::AbstractECPoint{B}, k::Integer) where B
+Performs scalar point multiplication using a right-to-left double-and-add method.
+"""
 function mult_standard_rtl(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -167,6 +178,10 @@ function mult_standard_rtl(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B
     return Q
 end
 
+"""
+    mult_standard_ltr(P::AbstractECPoint{B}, k::Integer) where B
+Performs scalar point multiplication using a left-to-right double-and-add method.
+"""
 function mult_standard_ltr(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -182,7 +197,12 @@ function mult_standard_ltr(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B
 end
 
 #windowed scalar mult, left to right
-function mult_window(P::AbstractECPoint{B}, k::Integer, w::Int=1)::AbstractECPoint{B} where B
+"""
+    mult_window(P::AbstractECPoint{B}, k::Integer, w::Int) where B
+Performs scalar point multiplication using a windowed left-to-right
+double-and-add method.
+"""
+function mult_window(P::AbstractECPoint{B}, k::Integer, w::Int)::AbstractECPoint{B} where B
     if w==1 return mult_standard(P, k) end
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -201,11 +221,9 @@ function mult_window(P::AbstractECPoint{B}, k::Integer, w::Int=1)::AbstractECPoi
 end
 
 """
-    mult_naf(p::AbstractECPoint{B}, n::Integer) where B
-Returns ``p \\cdot n``.
-
-Uses the binary NAF multiplication method described in Guide to Elliptic Curve Cryptography,
-algorithm 3.31.
+    mult_bnaf(P::AbstractECPoint{B}, k::Integer) where B
+Performs scalar point multiplication using a right-to-left
+double-and-add method with the binary NAF of `k`.
 """
 function mult_bnaf(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
@@ -226,6 +244,13 @@ function mult_bnaf(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where 
     return Q
 end
 
+"""
+    mult_memo(P::AbstractECPoint{B}, k::Integer) where B
+Performs scalar point multiplication using a right-to-left
+double-and-add method with the binary NAF of `k`. This function uses the memoised
+point doubling routine `double_memo`, and so it should only called with a known
+point `P` (i.e. one which will likely be seen again, such as a generating point).
+"""
 function mult_memo(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -251,6 +276,13 @@ function mult_memo(k, P::AbstractECPoint{B})::AbstractECPoint{B} where B
     return mult_memo(P, k)
 end
 
+
+"""
+    mult_bnaf_threaded(P::AbstractECPoint{B}, k::Integer) where B
+Performs scalar point multiplication using a right-to-left
+double-and-add method with the binary NAF of `k`, by spawning an extra thread
+where useful.
+"""
 function mult_bnaf_threaded(P::AbstractECPoint{B}, k::Integer)::AbstractECPoint{B} where B
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -275,7 +307,14 @@ end
 
 #Guide to ECC, algorithm 3.38
 #Window NAF method for point multiplication
-function mult_bnaf_window(P::AbstractECPoint{B}, k::Integer, w::Int=1)::AbstractECPoint{B} where B
+
+"""
+    mult_bnaf_window(P::AbstractECPoint{B}, k::Integer, w::Int) where B
+Performs scalar point multiplication using a windowed left-to-right
+double-and-add method with the binary NAF of `k`. Performs best with a window
+size of 8.
+"""
+function mult_bnaf_window(P::AbstractECPoint{B}, k::Integer, w::Int)::AbstractECPoint{B} where B
     if w==1 return mult_bnaf(P, k) end
     if k<0 return (-P)*(-k) end
     if iszero(P) return P end
@@ -326,6 +365,13 @@ end
 
 #Guide to ECC, algorithm 3.36
 #Window NAF method for point multiplication
+
+"""
+    mult_wnaf(P::AbstractECPoint{B}, k::Integer, w::Int) where B
+Performs scalar point multiplication using a left-to-right
+double-and-add method with the width-`w` NAF of `k`. Performs best with a width
+of 6.
+"""
 function mult_wnaf(P::AbstractECPoint{B}, k::Integer, w::Int)::AbstractECPoint{B} where B
     if w==1 return mult_bnaf(P, k) end
 

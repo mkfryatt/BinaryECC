@@ -11,28 +11,29 @@
 
 """
     CurveDomainParams{B}
-Represents the elliptic curve domain  parameters over ``\\mathbb{F}_{2^m}``
-described in SEC 1 (version 2), 3.1.2.
+Represents the elliptic curve domain parameters for elliptic curve groups defined
+over binary field `B`,  as described in SEC 1 (version 2), 3.1.2.
 
 It contains three fields:
-- ``G``, a generating point, in affine coordinates
-- ``n``, the order of ``G`` (i.e. the smallest ``n`` satisfying ``G \\cdot n = \\mathcal{O}``)
-- ``h``, the cofactor, ``h = \\#E(\\mathbb{F}_{2^m}) / n``
+- `G::ECPointAffine{B}`, a generating point, in affine coordinates
+- `n::BigInt`, the order of `G` (i.e. the smallest `n` satisfying ``G \\cdot n = \\mathcal{O}``)
+- `h::BigInt`, the cofactor, ``h = \\#E(\\mathbb{F}_{2^m}) / n``
 
 The other elements of the septuple described in 3.1.2 are accessible through
-the fields of ``G``.
+the fields of `G`.
 
-Several standard curves domain parameters (taken from SEC 2, section 3) are available:
-- SECT163K1(T::Type{U}) where U<:Unsigned
-- SECT163R1(T::Type{U}) where U<:Unsigned
-- SECT233K1(T::Type{U}) where U<:Unsigned
-- SECT233R1(T::Type{U}) where U<:Unsigned
-- SECT283K1(T::Type{U}) where U<:Unsigned
-- SECT283R1(T::Type{U}) where U<:Unsigned
-- SECT409K1(T::Type{U}) where U<:Unsigned
-- SECT409R1(T::Type{U}) where U<:Unsigned
-- SECT571K1(T::Type{U}) where U<:Unsigned
-- SECT571R1(T::Type{U}) where U<:Unsigned
+Several standard curves domain parameters (taken from SEC 2, section 3) can be created
+by calling the following functions with a word type `T`:
+- `SECT163K1(T::Type{U}) where U<:Unsigned`
+- `SECT163R1(T::Type{U}) where U<:Unsigned`
+- `SECT233K1(T::Type{U}) where U<:Unsigned`
+- `SECT233R1(T::Type{U}) where U<:Unsigned`
+- `SECT283K1(T::Type{U}) where U<:Unsigned`
+- `SECT283R1(T::Type{U}) where U<:Unsigned`
+- `SECT409K1(T::Type{U}) where U<:Unsigned`
+- `SECT409R1(T::Type{U}) where U<:Unsigned`
+- `SECT571K1(T::Type{U}) where U<:Unsigned`
+- `SECT571R1(T::Type{U}) where U<:Unsigned`
 """
 struct CurveDomainParams{B}
     G::ECPointAffine{B} #generator point

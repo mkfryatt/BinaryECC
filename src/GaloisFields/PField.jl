@@ -1,5 +1,13 @@
 struct PFieldEltMismatchException <: Exception end
 
+"""
+    PFieldElt
+Represents an element of a prime order field, with the named field `value::BigInt`
+holding the element itself, and `p::BigInt` holding the field order.
+
+Supports all standard arithmetic operations, such as `==`, `+`, `-`, `*`, `/`, `inv`, `^`,
+`isone`, `iszero`, `one`, `zero`, `isvalid`.
+"""
 struct PFieldElt
     value::BigInt
     p::BigInt
