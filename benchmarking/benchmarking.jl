@@ -8,17 +8,15 @@ end
 
 #reduction method type for each word size
 function collect_reduce(type="fast")
-    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
-    fields = [BFieldElt113, BFieldElt131, BFieldElt163, BFieldElt193,
-        BFieldElt233, BFieldElt239, BFieldElt283, BFieldElt409, BFieldElt571]
+    x_coords = [100* i for i=1:6]
     sizes = [UInt8,UInt16,UInt32,UInt64,UInt128]
 
     for size in sizes
         println("wordsize: $size")
         y_coords, ci = [], []
-        for i in 1:length(fields)
-            L = ceil(Int, 2*x_coords[i]/bitsize(size))
-            field = fields[i]{size, L}
+        for x in x_coords
+            L = ceil(Int, 2*x/bitsize(size))
+            field = BFieldElt{x,UInt(3),size,L}
             println("field: $field")
             x = "@benchmark reduce(\$($field(random(StaticUInt{$L,$size}))))"
             x = Meta.parse(x)
@@ -37,15 +35,14 @@ end
 
 #shift-and-add vs comb for each wordsize
 function collect_shiftandadd_vs_comb()
-    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
-    fields = [B113, B131, B163, B193, B233, B239, B283, B409, B571]
+    x_coords = [100* i for i=1:6]
     sizes = [UInt8,UInt16,UInt32,UInt64,UInt128]
 
     for size in sizes
         println("wordsize: $size")
         comb_coords, shift_coords, comb_ci, shift_ci = [], [], [], []
-        for field in fields
-            field = field(size)
+        for x in x_coords
+            field = B(x, UInt(3), size)
             println("field: $field")
             x = "@benchmark mult_comb_rtl(\$(random($field)), \$(random($field)))"
             x = Meta.parse(x)
@@ -70,15 +67,14 @@ function collect_shiftandadd_vs_comb()
 end
 
 function collect_windowsize_fieldmult()
-    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
-    fields = [B113, B131, B163, B193, B233, B239, B283, B409, B571]
+    x_coords = [100*i for i in 1:6]
 
     comb_coords, shift_coords, comb_ci, shift_ci = Dict(), Dict(), Dict(), Dict()
     for w in [1,2,4,8]
         println("windowsize: $w")
         comb_coords[w], shift_coords[w], comb_ci[w], shift_ci[w] = [],[],[],[]
-        for field in fields
-            field = field(UInt64)
+        for x in x_coords
+            field = B(x, UInt(3), UInt64)
             println("field: $field")
             if w==1
                 x = "@benchmark mult_comb_ltr(\$(random($field)), \$(random($field)))"
@@ -113,12 +109,11 @@ function collect_windowsize_fieldmult()
 end
 
 function collect_threads(w=1)
-    x_coords = [113, 131, 163, 193, 233, 239, 283, 409, 571]
-    fields = [B113, B131, B163, B193, B233, B239, B283, B409, B571]
-    fields = [f(UInt) for f in fields]
+    x_coords = [100*i for i in 1:6]
 
     standard_coords, threaded_coords, standard_ci, threaded_ci = [],[],[],[]
-    for field in fields
+    for f in x_coords
+        field = B(f, UInt(3), UInt64)
         println("field: $field")
         if w==1
             x = "@benchmark mult_shiftandadd(\$(random($field)), \$(random($field)))"
@@ -477,11 +472,11 @@ function collect_openssl()
     for i in 1:length(x_coords)
         m = orders[i]
         group = groups[i]
-        println("group: sect$m k1\n")
+        m = repr(m)*"k1"
+        println("group: sect$m\n")
 
-        x = "@benchmark run(`openssl ecparam -name sect"*repr(m)*"k1 -genkey -noout -text`)"
-        x = Meta.parse(x)
-        b = eval(x)
+        cmd = `openssl ecparam -name sect$m -genkey -noout -text`
+        b = @benchmark run($cmd)
         append!(y_coords["openssl"], [mean(b.times)])
         append!(ci["openssl"], [gaussian_ci(std(b.times), length(b.times))])
 
@@ -497,5 +492,43 @@ function collect_openssl()
         write(io, "$x_coords\n")
         write(io, "$y_coords\n")
         write(io, "$ci\n")
+    end
+end
+
+function collect_timingattack(w)
+    groups = [SECT163K1, SECT233K1, SECT283K1, SECT409K1, SECT571K1]
+    groups = [group(UInt64) for group in groups]
+    x_coords = [log(2, group.n) for group in groups]
+    orders = [163, 233, 283, 409, 571]
+
+    y_coords = Dict("mont1"=>[], "mont0"=>[], "std1"=>[], "std0"=>[])
+    ci = Dict("mont1"=>[], "mont0"=>[], "std1"=>[], "std0"=>[])
+    for group in groups
+        G = group.G
+        n = group.n
+        println(G)
+        mask = BigInt(1)<<w - 1
+
+        b = @benchmark mult_standard_rtl($G, $(rand(1:n) | mask))
+        append!(y_coords["std1"], [mean(b.times)])
+        append!(ci["std1"], [gaussian_ci(std(b.times), length(b.times))])
+
+        b = @benchmark mult_mont_general($G, $(rand(1:n) | mask))
+        append!(y_coords["mont1"], [mean(b.times)])
+        append!(ci["mont1"], [gaussian_ci(std(b.times), length(b.times))])
+
+        b = @benchmark mult_standard_rtl($G, $((rand(1:n) | mask) ⊻ mask))
+        append!(y_coords["std0"], [mean(b.times)])
+        append!(ci["std0"], [gaussian_ci(std(b.times), length(b.times))])
+
+        b = @benchmark mult_mont_general($G, $((rand(1:n) | mask) ⊻ mask))
+        append!(y_coords["mont0"], [mean(b.times)])
+        append!(ci["mont0"], [gaussian_ci(std(b.times), length(b.times))])
+    end
+
+    open("benchmarking/timing/timing.txt", "w") do io
+        write(io, "$x_coords\n")
+        write(io, "$(repr(y_coords))\n")
+        write(io, "$(repr(ci))\n")
     end
 end

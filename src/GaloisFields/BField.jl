@@ -164,7 +164,7 @@ Binary field multiplication using a right-to-left shift-and-add method, by spawn
 an additional thread.
 """
 function mult_threaded(a::BFieldElt{D,R,T,L}, b::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
-    mid = (length(a.value) ÷ 2)*64 -1
+    mid = (L ÷ 2)*bitsize(T) -1
     c1 = Threads.@spawn mult_threaded_helper($a, $b, 0, $mid)
     c2 = mult_threaded_helper(a, b, mid+1, D-1)
     longL = ceil(Int,2*D/bitsize(T))

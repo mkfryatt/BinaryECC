@@ -18,16 +18,17 @@ function reduction_methods()
             standard_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         end
 
-        p = plot(x_coords, fast_coords, yerror=fast_ci,
+        p = plot(x_coords, standard_coords, yerror=standard_ci,
             title="$size",
-            size = (300,200),
-            label="Fast reduce",
+            size = (300,250),
+            y_lims = (0,35),
+            label="Standard reduce",
             xlabel=L"\log_2 \textrm{field size}",
             ylabel=L"\textrm{time} / \upmu\textrm{s}")
 
-        plot!(p, x_coords, standard_coords, yerror=standard_ci,
+        plot!(p, x_coords, fast_coords, yerror=fast_ci,
             legend= size==UInt8,
-            label="Standard reduce")
+            label="Fast reduce")
 
         savefig("benchmarking/reduction_methods/reduction_methods$size.tex")
     end
@@ -41,15 +42,16 @@ function shiftandadd_vs_comb()
     for size in [UInt8, UInt16, UInt32, UInt64, UInt128]
         open("benchmarking/shiftandadd_vs_comb/shiftandadd_vs_comb$size.txt", "r") do io
             x_coords = eval(Meta.parse(readline(io)))
-            shift_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
-            shift_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
             comb_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
             comb_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            shift_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            shift_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         end
 
         p = plot(x_coords, shift_coords, yerror=shift_ci,
             title="$size",
-            size = (300,200),
+            size = (300,250),
+            y_lims = size==UInt8 ? (0,90) : (0, 60),
             label="Shift-and-add method",
             xlabel=L"\log_2 \textrm{field size}",
             ylabel=L"\textrm{time} / \upmu\textrm{s}")
@@ -95,6 +97,7 @@ function windowsize_fieldmult()
 
     p = plot(x_coords, shift_coords[1], yerror=shift_ci[1],
     title = "Shift-and-add method",
+    y_lims = (0,60),
     size = (300,200),
     legend=false,
     label="w=1",
@@ -108,6 +111,7 @@ function windowsize_fieldmult()
 
     p = plot(x_coords, comb_coords[1], yerror=comb_ci[1],
     title = "Comb method",
+    y_lims = (0,60),
     legend=false,
     size = (300,200),
     label="w=1",
@@ -136,14 +140,16 @@ function threads(w=1)
     end
 
     p = plot(x_coords, threads_coords, yerror=threads_ci,
-        size = (300,200),
-        label= w==1  ? "Multithreaded" : "Multithreaded, w=$w",
+        size = (240,200),
+        y_lims = (0,30),
+        title = w==1 ? "Standard multiplication" : "Multiplication, w=$w",
+        label= w==1  ? nothing : "Double-threaded",
         xlabel=L"\log_2 \textrm{field size}",
         ylabel=L"\textrm{time} / \upmu\textrm{s}")
 
     plot!(p, x_coords, standard_coords, yerror=standard_ci,
         legend= true,
-        label= w==1  ? "Single threaded" : "Single threaded, w=$w")
+        label= w==1  ? nothing : "Single-threaded")
 
     savefig("benchmarking/threads/$loc.tex")
     #savefig("benchmarking/$loc/$loc")
@@ -290,23 +296,6 @@ function plot_packages()
             becc_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
             becc_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         end
-        open("benchmarking/nemo/nemo-$op.txt", "r") do io
-            x_coords = eval(Meta.parse(readline(io)))
-            other_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
-            other_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
-        end
-
-        r = 1:length(x_coords)
-        p = plot(x_coords, becc_coords[r], yerror=becc_ci[r],
-            size = (300,200),
-            title = title,
-            label= "BinaryECC",
-            xlabel=L"\log_2 \textrm{field size}",
-            ylabel=L"\textrm{time} / \upmu\textrm{s}")
-
-        plot!(p, x_coords, other_coords, yerror=other_ci,
-            legend= op=="sq",
-            label= "Nemo")
 
         open("benchmarking/gf/gf-$op.txt", "r") do io
             x_coords = eval(Meta.parse(readline(io)))
@@ -314,9 +303,27 @@ function plot_packages()
             other_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
         end
 
+        #r = 1:length(x_coords)
+        p = plot(x_coords, other_coords, yerror=other_ci,
+            size = (300,200),
+            title = title,
+            label= "GaloisFields",
+            xlabel=L"\log_2 \textrm{field size}",
+            ylabel=L"\textrm{time} / \upmu\textrm{s}")
+
+        open("benchmarking/nemo/nemo-$op.txt", "r") do io
+            x_coords = eval(Meta.parse(readline(io)))
+            other_coords = [x/1000 for x in eval(Meta.parse(readline(io)))]
+            other_ci = [x/1000 for x in eval(Meta.parse(readline(io)))]
+        end
+
         plot!(p, x_coords, other_coords, yerror=other_ci,
             legend= op=="sq",
-            label= "GaloisFields")
+            label= "Nemo")
+
+        plot!(p, x_coords, becc_coords, yerror=becc_ci,
+            legend= op=="sq",
+            label= "BinaryECC")
 
         savefig("benchmarking/bfield/bfield-$op.tex")
         #savefig("benchmarking/$package/$package-$op")
@@ -336,9 +343,9 @@ function openssl()
         ci[type] = [t/1000000 for t in ci[type]]
     end
 
-    p = plot(x_coords, y_coords["becc"], yerror=ci["becc"],
+    p = plot(x_coords, y_coords["openssl"], yerror=ci["openssl"],
         size = (300,200),
-        label= "BinaryECC - fast",
+        label= "OpenSSL",
         xlabel=L"\log_2 \textrm{group size}",
         ylabel=L"\textrm{time} / \textrm{ms}")
 
@@ -352,13 +359,52 @@ function openssl()
     end
 
     plot!(p, x_coords,threads_coords, yerror=threads_ci,
-        legend= true,
         label= "BinaryECC - Montgomery")
 
-    plot!(p, x_coords, y_coords["openssl"], yerror=ci["openssl"],
-        legend= true,
-        label= "OpenSSL")
+    plot!(x_coords, y_coords["becc"], yerror=ci["becc"],
+        label= "BinaryECC - fast", legend=true)
 
     savefig("benchmarking/openssl/openssl.tex")
     savefig("benchmarking/openssl/openssl")
+end
+
+function plot_timing()
+    x_coords = []
+    y_coords = Dict("mont1"=>[], "mont0"=>[], "std1"=>[], "std0"=>[])
+    ci = Dict("mont1"=>[], "mont0"=>[], "std1"=>[], "std0"=>[])
+    open("benchmarking/timing/timing.txt", "r") do io
+        x_coords = eval(Meta.parse(readline(io)))
+        y_coords = eval(Meta.parse(readline(io)))
+        ci = eval(Meta.parse(readline(io)))
+    end
+
+    for key in keys(y_coords)
+        y_coords[key] = [t/1000000 for t in y_coords[key]]
+        ci[key] = [t/1000000 for t in ci[key]]
+    end
+
+
+    p = plot(x_coords, y_coords["mont1"] .- y_coords["mont0"],
+        yerror=ci["mont1"],
+        size = (300,200),
+        label= "mont diff",
+        xlabel=L"\log_2 \textrm{group size}",
+        ylabel=L"\textrm{time} / \textrm{ms}")
+
+    plot!(x_coords, [0 for x in x_coords], yerror=ci["mont0"])
+
+    savefig("benchmarking/timing/mont.tex")
+    savefig("benchmarking/timing/mont")
+
+    p = plot(x_coords, y_coords["std1"] .- y_coords["std0"],
+        yerror=ci["std1"],
+        size = (300,200),
+        label= "std diff",
+        xlabel=L"\log_2 \textrm{group size}",
+        ylabel=L"\textrm{time} / \textrm{ms}")
+
+    plot!(x_coords, [0 for x in x_coords], yerror=ci["std0"])
+
+    savefig("benchmarking/timing/std.tex")
+    savefig("benchmarking/timing/std")
 end
