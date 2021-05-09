@@ -14,7 +14,6 @@ bitsize(T) = 8*sizeof(T)
 
 include("GaloisFields/StaticUInt.jl")
 include("GaloisFields/BField.jl")
-include("GaloisFields/BField_fastreduce.jl")
 include("GaloisFields/PField.jl")
 
 include("EllipticCurves/EC.jl")
@@ -132,6 +131,7 @@ export
     B239,
     B283,
     B409,
-    B571
+    B571,
+    B
 
 end
