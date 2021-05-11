@@ -69,9 +69,15 @@ end
 function zero(::Type{PFieldElt}, p::Integer)
     return PFieldElt(0, p)
 end
+function zero(x::PFieldElt)
+    return PFieldElt(0, x.p)
+end
 
 function one(::Type{PFieldElt}, p::Integer)
     return PFieldElt(1, p)
+end
+function one(x::PFieldElt)
+    return PFieldElt(1, x.p)
 end
 
 function iszero(x::PFieldElt)

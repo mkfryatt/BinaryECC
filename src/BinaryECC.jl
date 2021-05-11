@@ -1,3 +1,16 @@
+"""
+This is a package for ECC, over binary finite fields.
+
+Elliptic curve groups available are SECT163K1, SECT163R1, SECT163R2, SECT233K1,
+SECT233R1, SECT283K1, SECT283R1, SECT409K1, SECT409R1, SECT571K1, SECT571R1.
+
+A curve can be instantiated as:
+E = SECT163K1(UInt64);
+
+and arithmetic can be performed as follows:
+iszero(E.G * E.n);
+E.G + 2E.G;
+"""
 module BinaryECC
 
 import Base:

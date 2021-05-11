@@ -278,7 +278,7 @@ function mult_mont()
 
     plot!(p, x_coords, wnaf_y[1], yerror=wnaf_ci[1],
         legend= true,
-        label= "Multithreaded binary NAF method")
+        label= "Dual-threaded binary NAF method")
 
     savefig("benchmarking/mult_mont/mult_mont.tex")
     savefig("benchmarking/mult_mont/mult_mont")

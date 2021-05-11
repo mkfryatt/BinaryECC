@@ -395,3 +395,7 @@ function mult_wnaf(P::AbstractECPoint{B}, k::Integer, w::Int)::AbstractECPoint{B
     end
     return Q
 end
+
+function zero(p::AbstractECPoint)
+    return zero(typeof(p), p.ec)
+end

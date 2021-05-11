@@ -480,6 +480,10 @@ function zero(::Type{BFieldElt{D,R,T,L}})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return BFieldElt{D,R,T,L}(zero(StaticUInt{L,T}))
 end
 
+function zero(::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
+    return BFieldElt{D,R,T,L}(zero(StaticUInt{L,T}))
+end
+
 """
     isone(a::BFieldElt)
 Returns true if ``a`` is equal to one (multiplicative identity), and false otherwise.
@@ -493,6 +497,10 @@ end
 Returns element one (multiplicative identity) of the specified field.
 """
 function one(::Type{BFieldElt{D,R,T,L}})::BFieldElt{D,R,T,L} where {D,R,T,L}
+    return BFieldElt{D,R,T,L}(one(StaticUInt{L,T}))
+end
+
+function one(::BFieldElt{D,R,T,L})::BFieldElt{D,R,T,L} where {D,R,T,L}
     return BFieldElt{D,R,T,L}(one(StaticUInt{L,T}))
 end
 
