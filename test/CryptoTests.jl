@@ -5,7 +5,7 @@ using Test
 function testecdsa(verbose=true)
     #https://www.ietf.org/rfc/rfc6979.txt
     if verbose println("Testing ECDSA") end
-    tests = readlines("./test/ecdsa.txt")
+    tests = readlines("ecdsa.txt")
     tests = [split(t, " = ")[2] for t in tests]
 
     i = 1
