@@ -4,7 +4,7 @@ using Test
 
 function testcurve(curve, verbose=true)
     if verbose println("Testing $curve:") end
-    tests = readlines("./test/$curve.txt")
+    tests = readlines("$curve.txt")
     G = curve(UInt).G
 
     for i in 1:4:length(tests)
